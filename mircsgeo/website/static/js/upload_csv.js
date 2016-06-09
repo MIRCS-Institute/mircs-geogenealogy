@@ -1,13 +1,20 @@
 $( document ).ready(function() {
-  $('#csv_upload_form').submit( function() {
-    console.log("HERE");
-    var formData = new FormData($(this)[0]);
+  $('#csvUploadForm #submitButton').click( function() {
+    var formData = new FormData($('#csvUploadForm')[0]);
+    // var formData =  $('#csvUploadForm').serialize();
     console.log(formData);
-    $.post( 'upload_csv', formData, function(data) {
+    $.ajax({
+      url: 'store_csv',
+      type: 'POST',
+      data: formData,
+      async: false,
+      cache: false,
+      contentType: false,
+      processData: false,
+      success: function(data) {
         console.log(data);
-      },
-      'json' // I expect a JSON response
-    );
+      }
+    });
     return false;
   });
 })

@@ -18,8 +18,19 @@ def home(request):
 
 def upload_csv(request):
     if request.method == 'POST':
+        return HttpResponseRedirect('test_response')
+    else:
+        form = UploadCsv()
+    return render(request, 'upload_csv.html', {'form': form})
+
+
+def store_csv(request):
+    if request.method == 'POST':
         # Do some stuff
         form = UploadCsv(request.POST, request.FILES)
+        print "got a post"
+        print request.POST
+        print request.FILES['csv_file']
         if form.is_valid():
             request.session['real_filename'] = request.FILES['csv_file'].name
             request.session['temp_filename'] = str(uuid.uuid4())
@@ -28,11 +39,9 @@ def upload_csv(request):
             absolute_path = os.path.join(os.path.dirname(__file__), settings.MEDIA_ROOT, request.session['temp_filename'])
             df = pd.read_csv(request.FILES['csv_file'])
             df.to_csv(absolute_path, index=False)
-            return JsonResponse({'columns': df.columns.tolist()})
+            return JsonResponse({'columns': df.columns.tolist(), 'rows': df[0:10].values.tolist()})
     else:
-        form = UploadCsv()
-    return render(request, 'upload_csv.html', {'form': form})
-
+        return None
 
 def test_response(request):
     return HttpResponse('yay')
