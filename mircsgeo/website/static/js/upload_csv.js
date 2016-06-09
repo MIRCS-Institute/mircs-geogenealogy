@@ -1,5 +1,5 @@
 $( document ).ready(function() {
-  $('#csvUploadForm #submitButton').click( function() {
+  $('#csvUploadForm #id_csv_file').change( function() {
     var formData = new FormData($('#csvUploadForm')[0]);
     console.log(formData);
     $.ajax({
