@@ -14,11 +14,6 @@ $( document ).ready(function() {
       success: function(data) {
         console.log(data);
         populateDataTable($('#uploadedDataTable'), data['columns'], data['rows'])
-      },
-      complete: function(jqXHR, textStatus) {
-        console.log(jqXHR);
-        console.log(textStatus);
-        console.log("Swag");
       }
     });
     return false;
