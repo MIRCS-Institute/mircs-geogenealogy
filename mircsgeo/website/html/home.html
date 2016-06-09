@@ -6,11 +6,15 @@
 {% block title %}Hello World!{% endblock %}
 
 {% block content %}
-<div id="contactContent">
-    <div class="heading">
-        Django says hi
-    </div>
-    <div class="contentText">
+<div id="contactContent" class="ui grid container">
+    <div class="ui column">
+      <div class="heading" >
+          <h1 class="ui header">MIRCS Geo-Genealogy</h1>
+      </div>
+      <div class="ui divider"></div>
+      <div class="contentText">
+        <a href="/upload_csv" class="ui button">Upload CSV</a>
+      </div>
     </div>
 </div>
 {% endblock %}
