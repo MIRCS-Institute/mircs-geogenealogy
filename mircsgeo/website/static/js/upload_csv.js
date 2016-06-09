@@ -1,3 +1,5 @@
+var selected_primary_key_cols = [];
+
 $( document ).ready(function() {
   $('#csvUploadForm #id_csv_file').change( function() {
     var formData = new FormData($('#csvUploadForm')[0]);
@@ -12,8 +14,31 @@ $( document ).ready(function() {
       processData: false,
       dataType: 'json',
       success: function(data) {
-        console.log(data);
-        populateDataTable($('#uploadedDataTable'), data['columns'], data['rows'])
+        populateDataTable($('#uploadedDataTable'), data['columns'], data['rows']);
+        $('#uploadedDataTable th').mouseover(function() {
+          var thClass = $(this).attr('class').split(' ')[0];
+          $('.'+thClass).addClass('active');
+        });
+        $('#uploadedDataTable th').mouseout(function() {
+          var thClass = $(this).attr('class').split(' ')[0];
+          $('.'+thClass).removeClass('active');
+        });
+        $('#uploadedDataTable th').click(function() {
+          var thClass = $(this).attr('class').split(' ')[0];
+          var key = $(this).text();
+          var key_index = $.inArray(key, selected_primary_key_cols);
+
+          if(key_index == -1) {
+            // This key isn't selected yet
+            $('.'+thClass).addClass('selected');
+            selected_primary_key_cols.push(key);
+          } else {
+            // This key was already selected
+            $('.'+thClass).removeClass('selected');
+            selected_primary_key_cols.splice(key_index, 1);
+          }
+          console.log(selected_primary_key_cols);
+        });
       }
     });
     return false;
@@ -25,7 +50,7 @@ function populateDataTable(tableElement, columns, rows) {
   // Iterate columns and create table headers for each
   var headerRow = $('<tr></tr>');
   for(var i=0; i<columns.length; i++) {
-    headerRow.append('<th>' + columns[i] + '</th>');
+    headerRow.append('<th class="col_' + i + '">' + columns[i] + '</th>');
   }
   tableElement.append($('<thead></thead>').append(headerRow));
 
@@ -42,7 +67,7 @@ function createTableRow(dataRow) {
   var tableRow = $('<tr></tr>');
   for(var i=0; i<dataRow.length; i++) {
     // Create a table element for every cell
-    tableRow.append('<td>' + dataRow[i] + '</td>');
+    tableRow.append('<td class="col_' + i + '">' + dataRow[i] + '</td>');
   }
   return tableRow;
 }

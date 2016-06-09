@@ -1,3 +1,7 @@
 #primaryKeyPicker {
   overflow-x: scroll;
 }
+
+#uploadedDataTable .selected {
+  background-color: #ADADAD;
+}
