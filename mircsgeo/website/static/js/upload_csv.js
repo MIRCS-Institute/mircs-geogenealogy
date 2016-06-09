@@ -10,8 +10,15 @@ $( document ).ready(function() {
       cache: false,
       contentType: false,
       processData: false,
+      dataType: 'json',
       success: function(data) {
+        console.log(data);
         populateDataTable($('#uploadedDataTable'), data['columns'], data['rows'])
+      },
+      complete: function(jqXHR, textStatus) {
+        console.log(jqXHR);
+        console.log(textStatus);
+        console.log("Swag");
       }
     });
     return false;
@@ -19,18 +26,21 @@ $( document ).ready(function() {
 })
 
 function populateDataTable(tableElement, columns, rows) {
+  tableElement.empty();
   // Iterate columns and create table headers for each
   var headerRow = $('<tr></tr>');
   for(var i=0; i<columns.length; i++) {
     headerRow.append('<th>' + columns[i] + '</th>');
   }
-  tableElement.append(headerRow);
+  tableElement.append($('<thead></thead>').append(headerRow));
 
+  var tableBody = $('<tbody></tbody>');
   // Iterate rows of data and create table rows for each
   for(var i=0; i<rows.length; i++) {
     // step through rows of data, convert each to an html table row, append to the table
-    tableElement.append(createTableRow(rows[i]));
+    tableBody.append(createTableRow(rows[i]));
   }
+  tableElement.append(tableBody);
 }
 
 function createTableRow(dataRow) {

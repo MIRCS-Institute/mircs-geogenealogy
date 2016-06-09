@@ -11,6 +11,7 @@ import pandas as pd
 import os
 import uuid
 
+
 def home(request):
     context = {}
     return render(request, 'home.html', context)
@@ -39,9 +40,18 @@ def store_csv(request):
             absolute_path = os.path.join(os.path.dirname(__file__), settings.MEDIA_ROOT, request.session['temp_filename'])
             df = pd.read_csv(request.FILES['csv_file'])
             df.to_csv(absolute_path, index=False)
-            return JsonResponse({'columns': df.columns.tolist(), 'rows': df[0:10].values.tolist()})
+            columns = df.columns.tolist()
+            rows = df[0:10].values.tolist()
+            for row in rows:
+                for i, e in enumerate(row):
+                    if pd.isnull(e):
+                        row[i] = 'null'
+            print rows
+            print JsonResponse({'columns': columns, 'rows': rows})
+            return JsonResponse({'columns': columns, 'rows': rows})
     else:
         return None
+
 
 def test_response(request):
     return HttpResponse('yay')
