@@ -23,12 +23,16 @@
   </div>
   <div class="sixteen wide column">
     <div id='primaryKeyPicker' style="display:none;">
-      <div class="ui form">
+      <form id='csvUploadForm' enctype='multipart/form-data' class="ui form" method="POST" action="/create_table">
+        {% csrf_token %}
         <div class="field">
           <label>Primary Key</label>
-          <select id="pkey" multiple="" class="ui dropdown"></select>
+          <select  name="p_key"  id="primary_key" multiple="" class="ui dropdown"></select>
         </div>
-      </div>
+        <div class="field">
+          <input class="ui button" type="submit" value="Submit"/>
+        </div>
+      </form>
 
       <h3 class="ui header">Dataset</h3>
 

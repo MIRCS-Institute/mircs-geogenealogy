@@ -15,7 +15,7 @@ $( document ).ready(function() {
       processData: false,
       dataType: 'json',
       success: function(data) {
-        populatePrimaryKeyPicker($('#pkey'), data['columns']);
+        populatePrimaryKeyPicker($('#primary_key'), data['columns']);
         $('select.dropdown').dropdown();
         populateDataTable($('#uploadedDataTable'), data['columns'], data['rows']);
         $('#uploadedDataTable th').mouseover(function() {

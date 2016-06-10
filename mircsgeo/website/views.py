@@ -52,6 +52,17 @@ def store_csv(request):
     else:
         return None
 
+def create_table(request):
+    if request.method == 'POST':
+        # Do some stuff
+        post_data = dict(request.POST)
+        primary_key =  post_data['p_key']
+        absolute_path = os.path.join(os.path.dirname(__file__), settings.MEDIA_ROOT, request.session['temp_filename'])
+        df = pd.read_csv(absolute_path)
+        df.to_sql(request.session['real_filename'], request.session.engine, if_exists='replace')
+    else:
+        return None
+
 
 def test_response(request):
     return HttpResponse('yay')
