@@ -7,7 +7,7 @@
 
 {% block content %}
 <div id="contactContent" class="ui grid container">
-    <div class="ui column">
+    <div class="ui sixteen wide column">
       <div class="heading" >
           <h1 class="ui header">MIRCS Geo-Genealogy</h1>
       </div>
@@ -16,5 +16,12 @@
         <a href="/upload_csv" class="ui button">Upload CSV</a>
       </div>
     </div>
+
+    {% for t in tables %}
+        <div class="sixteen wide column">
+          <a href="#">{{ t }}</a>
+        </div>
+    {% endfor %}
+
 </div>
 {% endblock %}

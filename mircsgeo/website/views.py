@@ -1,7 +1,8 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.template import RequestContext
 from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 from django.conf import settings
+from sqlalchemy.orm import sessionmaker
 
 import website.models
 from .forms import UploadCsv
@@ -11,9 +12,13 @@ import pandas as pd
 import os
 import uuid
 
+schema = "mircs"
 
 def home(request):
-    context = {}
+    db = Session().connection()
+    tables = pd.read_sql("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = %(schema)s AND tablename != 'spatial_ref_sys'",db, params={'schema':schema})
+    print tables
+    context = {'tables': tables.tablename.tolist() }
     return render(request, 'home.html', context)
 
 
@@ -57,9 +62,13 @@ def create_table(request):
         # Do some stuff
         post_data = dict(request.POST)
         primary_key =  post_data['p_key']
+        primary_key = [x.replace(" ", "_") for x in primary_key]
         absolute_path = os.path.join(os.path.dirname(__file__), settings.MEDIA_ROOT, request.session['temp_filename'])
         df = pd.read_csv(absolute_path)
-        df.to_sql(request.session['real_filename'], request.session.engine, if_exists='replace')
+        df.columns = [x.replace(" ", "_") for x in df.columns]
+        db = Session().connection()
+        df.to_sql(request.session['real_filename'].replace(".csv","").lower(), db, schema=schema)
+        return redirect('/')
     else:
         return None
 
