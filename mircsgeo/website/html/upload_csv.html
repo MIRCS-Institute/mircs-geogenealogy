@@ -6,19 +6,36 @@
 <script src="{% static 'js/upload_csv.js' %}"></script>
 {% endblock %}
 
-{% block title %}Hello World!{% endblock %}
+{% block title %}Upload CSV{% endblock %}
 
 {% block content %}
-<div id='uploader'>
-  <form id='csvUploadForm' enctype='multipart/form-data'>
-    {% csrf_token %}
-    {{ form }}
-    <!-- <button id="submitButton" type="button">Click Me!</button> -->
-  </form>
+<div class="ui grid container">
+  <div class="sixteen wide column">
+    <h1 class="ui header">Upload CSV</h1>
+    <div id='uploader'>
+      <form id='csvUploadForm' enctype='multipart/form-data' class="ui form">
+        {% csrf_token %}
+        <div class="ui input">
+          {{ form }}
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="sixteen wide column">
+    <div id='primaryKeyPicker' style="display:none;">
+      <div class="ui form">
+        <div class="field">
+          <label>Primary Key</label>
+          <select id="pkey" multiple="" class="ui dropdown"></select>
+        </div>
+      </div>
+
+      <h3 class="ui header">Dataset</h3>
+
+      <table id='uploadedDataTable' class="ui celled striped table responsive stackable">
+      </table>
+    </div>
+    <div id='uploadConfirmation'></div>
+  </div>
 </div>
-<div id='primaryKeyPicker'>
-  <table id='uploadedDataTable' class="ui celled striped table stackable">
-  </table>
-</div>
-<div id='uploadConfirmation'></div>
 {% endblock %}

@@ -1,6 +1,7 @@
 var selected_primary_key_cols = [];
 
 $( document ).ready(function() {
+
   $('#csvUploadForm #id_csv_file').change( function() {
     var formData = new FormData($('#csvUploadForm')[0]);
     console.log(formData);
@@ -14,6 +15,8 @@ $( document ).ready(function() {
       processData: false,
       dataType: 'json',
       success: function(data) {
+        populatePrimaryKeyPicker($('#pkey'), data['columns']);
+        $('select.dropdown').dropdown();
         populateDataTable($('#uploadedDataTable'), data['columns'], data['rows']);
         $('#uploadedDataTable th').mouseover(function() {
           var thClass = $(this).attr('class').split(' ')[0];
@@ -39,11 +42,20 @@ $( document ).ready(function() {
           }
           console.log(selected_primary_key_cols);
         });
+        $('#primaryKeyPicker').show();
       }
     });
     return false;
   });
 })
+
+function populatePrimaryKeyPicker(selectElement, columns) {
+  selectElement.empty();
+  selectElement.append('<option value="">Select Primary Key Columns...</option>');
+  $.each(columns, function(k,v){
+    selectElement.append('<option value="'+v+'">'+v+'</option>');
+  });
+}
 
 function populateDataTable(tableElement, columns, rows) {
   tableElement.empty();
