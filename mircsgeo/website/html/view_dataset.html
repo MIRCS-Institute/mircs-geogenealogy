@@ -22,9 +22,9 @@
           </tr>
         </thead>
         <tbody>
-          {% for key, item in dataset.items %}
+          {% for item in dataset %}
             <tr>
-              {% for k, value in item.items%}
+              {% for value in item %}
               <td>
                 {{ value }}
               </td>

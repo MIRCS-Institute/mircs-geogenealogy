@@ -75,7 +75,9 @@ def create_table(request):
 def view_dataset(request, table):
     db = Session().connection()
     df = pd.read_sql("SELECT * FROM "+schema+"."+table+" LIMIT 100", db, params={'schema':schema, 'table':table})
-    return render(request, 'view_dataset.html', {'dataset': df.T.to_dict(), 'columns': df.columns.tolist(), 'tablename':table})
+    columns = df.columns.tolist()
+    rows = df.values.tolist()
+    return render(request, 'view_dataset.html', {'dataset': rows, 'columns': columns, 'tablename':table})
 
 
 def test_response(request):
