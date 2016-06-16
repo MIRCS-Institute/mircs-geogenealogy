@@ -2,11 +2,11 @@ var selected_primary_key_cols = [];
 
 $( document ).ready(function() {
 
-  $('#csvUploadForm #id_csv_file').change( function() {
-    var formData = new FormData($('#csvUploadForm')[0]);
+  $('#fileUploadForm #id_file_upload').change( function() {
+    var formData = new FormData($('#fileUploadForm')[0]);
     console.log(formData);
     $.ajax({
-      url: 'store_csv',
+      url: 'store_file',
       type: 'POST',
       data: formData,
       async: false,

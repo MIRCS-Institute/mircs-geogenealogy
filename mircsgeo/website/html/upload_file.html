@@ -2,18 +2,18 @@
 {% load staticfiles %}
 
 {% block externalLibraries %}
-<link rel="stylesheet" href="{% static 'css/upload_csv.css' %}">
-<script src="{% static 'js/upload_csv.js' %}"></script>
+<link rel="stylesheet" href="{% static 'css/upload_file.css' %}">
+<script src="{% static 'js/upload_file.js' %}"></script>
 {% endblock %}
 
-{% block title %}Upload CSV{% endblock %}
+{% block title %}Upload file{% endblock %}
 
 {% block content %}
 <div class="ui grid container">
   <div class="sixteen wide column">
-    <h1 class="ui header">Upload CSV</h1>
+    <h1 class="ui header">Upload file</h1>
     <div id='uploader'>
-      <form id='csvUploadForm' enctype='multipart/form-data' class="ui form">
+      <form id='fileUploadForm' enctype='multipart/form-data' class="ui form">
         {% csrf_token %}
         <div class="ui input">
           {{ form }}
@@ -23,7 +23,7 @@
   </div>
   <div class="sixteen wide column">
     <div id='primaryKeyPicker' style="display:none;">
-      <form id='csvUploadForm' enctype='multipart/form-data' class="ui form" method="POST" action="/create_table">
+      <form id='fileUploadForm' enctype='multipart/form-data' class="ui form" method="POST" action="/create_table">
         {% csrf_token %}
         <div class="field">
           <label>Primary Key</label>

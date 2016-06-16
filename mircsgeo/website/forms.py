@@ -1,5 +1,5 @@
 from django import forms
 
 
-class UploadCsv(forms.Form):
-    csv_file = forms.FileField(label='CSV File:')
+class Uploadfile(forms.Form):
+    file_upload = forms.FileField(label='Choose File:')
