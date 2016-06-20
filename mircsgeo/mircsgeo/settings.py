@@ -81,15 +81,22 @@ WSGI_APPLICATION = 'mircsgeo.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'mircs',
+        'NAME': 'mircs',  # I hope this is the database name, cause I'm using it that way
         'USER': 'postgres',
         'PASSWORD': 'sos2016',
         'HOST': '127.0.0.1',
         'PORT': '5432',
+        'SCHEMA': 'mircs',
     }
 }
 
-
+SQLALCHEMY_CONNECT_STRING = 'postgresql://%s:%s@%s:%s/%s' % (
+    DATABASES['default']['USER'],
+    DATABASES['default']['PASSWORD'],
+    DATABASES['default']['HOST'],
+    DATABASES['default']['PORT'],
+    DATABASES['default']['NAME'],
+)
 # Password validation
 # https://docs.djangoproject.com/en/1.9/ref/settings/#auth-password-validators
 

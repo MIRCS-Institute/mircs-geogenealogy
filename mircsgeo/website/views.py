@@ -4,7 +4,7 @@ from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 from django.conf import settings
 from sqlalchemy.orm import sessionmaker
 
-import website.models
+import website.models as m
 from .forms import Uploadfile
 
 import pandas as pd
@@ -12,14 +12,23 @@ import pandas as pd
 import os
 import uuid
 
+import datetime
+
 schema = "mircs"
 
 
 def home(request):
     db = Session().connection()
-    tables = pd.read_sql("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = %(schema)s AND tablename != 'spatial_ref_sys'",db, params={'schema':schema})
-    print tables
-    context = {'tables': tables.tablename.tolist() }
+    session = m.get_session()
+    tables = session.query(
+        m.DATASETS.original_filename,
+        m.DATASETS.table_name,
+        m.DATASETS.upload_date
+    ).all()
+    session.close()
+
+    print tables[0].original_filename
+    context = {'tables': tables}
     return render(request, 'home.html', context)
 
 
@@ -67,21 +76,42 @@ def create_table(request):
         primary_key =  post_data['p_key']
         primary_key = [x.replace(" ", "_") for x in primary_key]
         absolute_path = os.path.join(os.path.dirname(__file__), settings.MEDIA_ROOT, request.session['temp_filename'])
-        df = pd.read_file(absolute_path)
+        df = pd.read_csv(absolute_path)
+        table_name = str(uuid.uuid4()).replace("-", "")
+
+        # Get an sqlalchemy session automap'ed to the database
+        session = m.get_session()
+        # Create a new dataset to be added
+        dataset = m.DATASETS(
+            original_filename=request.session['real_filename'],
+            table_name=table_name,
+            upload_date=datetime.datetime.now(),
+        )
+        # Add the dataset to the session and commit the session to the database
+        session.add(dataset)
+        session.commit()
+
         df.columns = [x.replace(" ", "_") for x in df.columns]
-        db = Session().connection()
-        df.to_sql(request.session['real_filename'].replace(".file","").lower(), db, schema=schema, index=True, index_label="Index")
+
+        df.to_sql(table_name, Session().connection(), schema=schema, index=True, index_label="id")
+        session.close()
         return redirect('/')
     else:
         return None
 
 
 def view_dataset(request, table):
+    # Get a session
+    session = m.get_session()
+    # Get the name of the file used to create the table being queried
+    table_name = str(session.query(m.DATASETS.original_filename).filter(m.DATASETS.table_name == table).one()[0])
+    session.close
+
     db = Session().connection()
     df = pd.read_sql("SELECT * FROM "+schema+"."+table+" LIMIT 100", db, params={'schema':schema, 'table':table})
     columns = df.columns.tolist()
     rows = df.values.tolist()
-    return render(request, 'view_dataset.html', {'dataset': rows, 'columns': columns, 'tablename':table})
+    return render(request, 'view_dataset.html', {'dataset': rows, 'columns': columns, 'tablename':table_name})
 
 
 def test_response(request):
