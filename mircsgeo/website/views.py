@@ -70,7 +70,7 @@ def create_table(request):
         df = pd.read_file(absolute_path)
         df.columns = [x.replace(" ", "_") for x in df.columns]
         db = Session().connection()
-        df.to_sql(request.session['real_filename'].replace(".file","").lower(), db, schema=schema)
+        df.to_sql(request.session['real_filename'].replace(".file","").lower(), db, schema=schema, index=True, index_label="Index")
         return redirect('/')
     else:
         return None
