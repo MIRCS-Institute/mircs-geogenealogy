@@ -94,6 +94,7 @@ def create_table(request):
         df.columns = [x.replace(" ", "_") for x in df.columns]
 
         df.to_sql(table_name, Session().connection(), schema=schema, index=True, index_label="id")
+        Session().connection().execute("ALTER TABLE "+schema+".\""+table_name+"\" ADD PRIMARY KEY (id)", );
         session.close()
         return redirect('/')
     else:
