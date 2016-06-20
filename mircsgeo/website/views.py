@@ -27,7 +27,7 @@ def home(request):
     ).all()
     session.close()
 
-    print tables[0].original_filename
+    #print tables[0].original_filename
     context = {'tables': tables}
     return render(request, 'home.html', context)
 
@@ -108,7 +108,7 @@ def view_dataset(request, table):
     session.close
 
     db = Session().connection()
-    df = pd.read_sql("SELECT * FROM "+schema+"."+table+" LIMIT 100", db, params={'schema':schema, 'table':table})
+    df = pd.read_sql("SELECT * FROM "+schema+".\""+table+"\" LIMIT 100", db, params={'schema':schema, 'table':table})
     columns = df.columns.tolist()
     rows = df.values.tolist()
     return render(request, 'view_dataset.html', {'dataset': rows, 'columns': columns, 'tablename':file_name})
