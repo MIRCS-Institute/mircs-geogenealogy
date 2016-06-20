@@ -104,14 +104,14 @@ def view_dataset(request, table):
     # Get a session
     session = m.get_session()
     # Get the name of the file used to create the table being queried
-    table_name = str(session.query(m.DATASETS.original_filename).filter(m.DATASETS.table_name == table).one()[0])
+    file_name = str(session.query(m.DATASETS.original_filename).filter(m.DATASETS.table_name == table).one()[0])
     session.close
 
     db = Session().connection()
     df = pd.read_sql("SELECT * FROM "+schema+"."+table+" LIMIT 100", db, params={'schema':schema, 'table':table})
     columns = df.columns.tolist()
     rows = df.values.tolist()
-    return render(request, 'view_dataset.html', {'dataset': rows, 'columns': columns, 'tablename':table_name})
+    return render(request, 'view_dataset.html', {'dataset': rows, 'columns': columns, 'tablename':file_name})
 
 
 def test_response(request):
