@@ -1,5 +1,3 @@
-var selected_primary_key_cols = [];
-
 $( document ).ready(function() {
 
   $('#fileUploadForm #id_file_upload').change( function() {
@@ -17,31 +15,13 @@ $( document ).ready(function() {
       success: function(data) {
         populatePrimaryKeyPicker($('#primary_key'), data['columns']);
         $('select.dropdown').dropdown();
-        populateDataTable($('#uploadedDataTable'), data['columns'], data['rows']);
-        $('#uploadedDataTable th').mouseover(function() {
-          var thClass = $(this).attr('class').split(' ')[0];
-          $('.'+thClass).addClass('active');
-        });
-        $('#uploadedDataTable th').mouseout(function() {
-          var thClass = $(this).attr('class').split(' ')[0];
-          $('.'+thClass).removeClass('active');
-        });
-        $('#uploadedDataTable th').click(function() {
-          var thClass = $(this).attr('class').split(' ')[0];
-          var key = $(this).text();
-          var key_index = $.inArray(key, selected_primary_key_cols);
-
-          if(key_index == -1) {
-            // This key isn't selected yet
-            $('.'+thClass).addClass('selected');
-            selected_primary_key_cols.push(key);
-          } else {
-            // This key was already selected
-            $('.'+thClass).removeClass('selected');
-            selected_primary_key_cols.splice(key_index, 1);
-          }
-          console.log(selected_primary_key_cols);
-        });
+        populateDataTable(
+          $('#uploadedDataTable'),
+          data['columns'],
+          data['rows'],
+          data['datatypes'],
+          data['possibleDatatypes']
+        );
         $('#primaryKeyPicker').show();
       }
     });
@@ -57,7 +37,9 @@ function populatePrimaryKeyPicker(selectElement, columns) {
   });
 }
 
-function populateDataTable(tableElement, columns, rows) {
+function populateDataTable(tableElement, columns, rows, datatypes, possibleDatatypes) {
+  console.log(datatypes);
+  console.log(possibleDatatypes);
   tableElement.empty();
   // Iterate columns and create table headers for each
   var headerRow = $('<tr></tr>');
@@ -66,6 +48,16 @@ function populateDataTable(tableElement, columns, rows) {
   }
   tableElement.append($('<thead></thead>').append(headerRow));
 
+  // Iterate the datatypes and create table headers for each
+  var headerRow = $('<tr></tr>');
+  for(var i=0; i<datatypes.length; i++) {
+    var datatypePicker = createDatatypePicker(datatypes[i], possibleDatatypes);
+    var header = $('<th class="col_' + i + '"></th>').append(datatypePicker);
+    headerRow.append(header);
+  }
+  tableElement.append($('<thead></thead>').append(headerRow));
+  $('.ui.dropdown').dropdown();
+
   var tableBody = $('<tbody></tbody>');
   // Iterate rows of data and create table rows for each
   for(var i=0; i<rows.length; i++) {
@@ -73,6 +65,20 @@ function populateDataTable(tableElement, columns, rows) {
     tableBody.append(createTableRow(rows[i]));
   }
   tableElement.append(tableBody);
+}
+
+function createDatatypePicker(currentDatatype, possibleDatatypes) {
+  var pickerDiv = $('<div class="ui selection dropdown"></div>')
+                    .append('<input type="hidden" value="' + currentDatatype + '">')
+                    .append('<div class="text">' + currentDatatype + '</div>');
+
+  var menu = $('<div class="menu"></div>');
+
+  for(var i=0; i<possibleDatatypes.length; i++) {
+    menu.append('<div class="item" data-value="' + possibleDatatypes[i]
+                      +'">' + possibleDatatypes[i] + '</div>');
+  }
+  return pickerDiv.append(menu);
 }
 
 function createTableRow(dataRow) {

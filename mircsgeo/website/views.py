@@ -14,6 +14,8 @@ import uuid
 
 import datetime
 
+import website.table_generator as table_generator
+
 schema = "mircs"
 
 
@@ -81,14 +83,28 @@ def store_file(request):
             # Store the file as a csv
             df.to_csv(absolute_path, index=False)
 
+            df = convert_time_columns(df)
+
             # Return the columns and the first 10 rows of the file as a JSON object
             columns = df.columns.tolist()
             rows = df[0:10].values.tolist()
+
+            # Get the autopicked datatypes for the columns
+            datatypes = table_generator.get_readable_types_from_dataframe(df)
+            possible_datatypes = table_generator.type_mappings.values()
+
+            # Convert np.NaN objects to 'null' so rows is JSON serializable
             for row in rows:
                 for i, e in enumerate(row):
                     if pd.isnull(e):
                         row[i] = 'null'
-            return JsonResponse({'columns': columns, 'rows': rows})
+
+            return JsonResponse({
+                'columns': columns,
+                'rows': rows,
+                'datatypes': datatypes,
+                'possibleDatatypes': possible_datatypes
+            })
     else:
         return None
 
@@ -178,6 +194,15 @@ def view_dataset(request, table):
 
 def test_response(request):
     return HttpResponse('yay')
+
+
+def convert_time_columns(df, datetime_identifiers=['time', 'date']):
+    # Find and convert time and date columns based on name
+    for c in df.columns:
+        for d in datetime_identifiers:
+            if d in c:
+                df[c] = pd.to_datetime(df[c])
+    return df
 
 
 def Session():
