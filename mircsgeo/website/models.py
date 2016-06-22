@@ -15,7 +15,7 @@ import atexit
 # Get a connection to the database based on the info in settings.py
 engine = create_engine(settings.SQLALCHEMY_CONNECT_STRING, echo=False)
 # Create a metadata object to attach tables to
-m = MetaData()
+m = MetaData(schema=settings.DATABASES['default']['SCHEMA'])
 
 datasets = Table('datasets', m,
     Column('id', Integer, primary_key=True),

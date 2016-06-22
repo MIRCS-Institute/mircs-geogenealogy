@@ -94,10 +94,7 @@ def store_file(request):
             possible_datatypes = table_generator.type_mappings.values()
 
             # Convert np.NaN objects to 'null' so rows is JSON serializable
-            for row in rows:
-                for i, e in enumerate(row):
-                    if pd.isnull(e):
-                        row[i] = 'null'
+            rows = convert_nans(rows)
 
             return JsonResponse({
                 'columns': columns,
@@ -134,6 +131,10 @@ def create_table(request):
         )
         # Use pandas to read the uploaded file as a CSV
         df = pd.read_csv(absolute_path)
+        df = convert_time_columns(df)
+        # Replace spaces with underscores in the column names to be used in the db table
+        df.columns = [x.replace(" ", "_") for x in df.columns]
+
         # Generate a UUID to use as the table name, use replace to remove dashes
         table_name = str(uuid.uuid4()).replace("-", "")
 
@@ -149,12 +150,9 @@ def create_table(request):
         session.add(dataset)
         session.commit()
 
-        # Replace spaces with underscores in the column names to be used in the db table
-        df.columns = [x.replace(" ", "_") for x in df.columns]
-
         # Generate a database table based on the data found in the CSV file
-        table_generator.to_sql(df, datatypes, table_name, session, schema=schema)
-        
+        table_generator.to_sql(df, datatypes, table_name, schema=schema)
+
         session.close()
         return redirect('/')
     else:
@@ -184,7 +182,7 @@ def view_dataset(request, table):
     df = pd.read_sql("SELECT * FROM " + schema + ".\"" + table + "\" LIMIT 100",
                      db, params={'schema': schema, 'table': table})
     columns = df.columns.tolist()
-    rows = df.values.tolist()
+    rows = convert_nans(df.values.tolist())
     return render(request, 'view_dataset.html', {
         'dataset': rows,
         'columns': columns,
@@ -200,10 +198,17 @@ def convert_time_columns(df, datetime_identifiers=['time', 'date']):
     # Find and convert time and date columns based on name
     for c in df.columns:
         for d in datetime_identifiers:
-            if d in c:
+            if d in c.lower():
                 df[c] = pd.to_datetime(df[c])
     return df
 
+def convert_nans(rows):
+    # Convert np.NaN objects to 'null' so rows is JSON serializable
+    for row in rows:
+        for i, e in enumerate(row):
+            if pd.isnull(e):
+                row[i] = 'null'
+    return rows
 
 def Session():
     from aldjemy.core import get_engine

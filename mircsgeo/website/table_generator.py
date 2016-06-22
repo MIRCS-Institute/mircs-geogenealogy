@@ -22,7 +22,17 @@ alchemy_types = {
 }
 
 
-def to_sql(df, datatypes, table_name, session, schema):
+def to_sql(df, datatypes, table_name, schema):
+    create_table(df, datatypes, table_name, schema)
+    session = m.get_session()
+    table = getattr(m.Base.classes, table_name)
+    print table
+    insert_df(df, table, session)
+    session.close()
+    return table
+
+
+def create_table(df, datatypes, table_name, schema):
     datatypes = get_alchemy_types(datatypes)
     columns = [Column('id', Integer, primary_key=True)]
     for i, c in enumerate(df.columns):
@@ -31,7 +41,21 @@ def to_sql(df, datatypes, table_name, session, schema):
         )
     table = Table(table_name, m.m, *columns, schema=schema)
     m.m.create_all(m.engine)
-    print table_name
+    m.refresh()
+    return table
+
+
+def insert_df(df, table, session):
+    print dir(table)
+    for row in df.to_dict('records'):
+        for c in row:
+            if pd.isnull(row[c]):
+                row[c] = None
+        session.add(
+            table(**row)
+        )
+    session.commit()
+    return
 
 
 def get_alchemy_types(mapped_types):
