@@ -120,6 +120,8 @@ def create_table(request):
         post_data = dict(request.POST)
         # Get teh primary key from the posted data
         primary_key = post_data['p_key']
+        datatypes = post_data['datatypes'][0].split(',')
+
         # Replace any spaces in the key name with underscores
         primary_key = [x.replace(" ", "_") for x in primary_key]
         # Figure out the path to the file that was originally uploaded
@@ -151,10 +153,8 @@ def create_table(request):
         df.columns = [x.replace(" ", "_") for x in df.columns]
 
         # Generate a database table based on the data found in the CSV file
-        df.to_sql(table_name, Session().connection(), schema=schema, index=True, index_label="id")
-        # Alter the table to set the id column as the primary key
-        Session().connection().execute("ALTER TABLE " + schema + ".\"" +
-                                       table_name + "\" ADD PRIMARY KEY (id)", )
+        table_generator.to_sql(df, datatypes, table_name, session, schema=schema)
+        
         session.close()
         return redirect('/')
     else:

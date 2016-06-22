@@ -15,14 +15,22 @@ $( document ).ready(function() {
       success: function(data) {
         populatePrimaryKeyPicker($('#primary_key'), data['columns']);
         $('select.dropdown').dropdown();
+        var dataTable = $('#uploadedDataTable');
         populateDataTable(
-          $('#uploadedDataTable'),
+          dataTable,
           data['columns'],
           data['rows'],
           data['datatypes'],
           data['possibleDatatypes']
         );
         $('#primaryKeyPicker').show();
+        // Add an event handler to get the entered datatypes from the table and
+        // append them to the form before submission
+        $('#primaryKeyPicker').find( "#fileUploadForm" ).submit(function( event ) {
+          var datatypes = dataTable.find('.ui.dropdown').dropdown('get value');
+          var input = $('<input>').attr({'type':'hidden','name':'datatypes'}).val(datatypes);
+          $(this).append(input);
+        });
       }
     });
     return false;
@@ -49,7 +57,7 @@ function populateDataTable(tableElement, columns, rows, datatypes, possibleDatat
   tableElement.append($('<thead></thead>').append(headerRow));
 
   // Iterate the datatypes and create table headers for each
-  var headerRow = $('<tr></tr>');
+  var headerRow = $('<tr id="datatypes"></tr>');
   for(var i=0; i<datatypes.length; i++) {
     var datatypePicker = createDatatypePicker(datatypes[i], possibleDatatypes);
     var header = $('<th class="col_' + i + '"></th>').append(datatypePicker);

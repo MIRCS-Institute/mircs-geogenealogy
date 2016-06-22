@@ -58,6 +58,17 @@ METADATA = Base.classes.metadata
 DATASET_TRANSACTIONS = Base.classes.dataset_transactions
 
 
+def refresh():
+    global m
+    global Base
+    global Session
+    global engine
+    m.reflect(engine)
+    Base = automap_base(metadata=m)
+    Base.prepare()
+    Session = sessionmaker(bind=engine)
+
+
 # Helper function for querying
 def get_session():
     return Session()

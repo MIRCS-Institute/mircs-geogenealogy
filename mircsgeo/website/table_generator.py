@@ -5,6 +5,8 @@ from sqlalchemy import create_engine, MetaData, Table, Column, Integer, \
                        String, Float, DateTime, ForeignKeyConstraint, ForeignKey,\
                        Enum, UniqueConstraint, Boolean
 
+import website.models as m
+
 type_mappings = {
     'int': 'integer',
     'float': 'float',
@@ -18,6 +20,18 @@ alchemy_types = {
     'datetime': DateTime,
     'string': String
 }
+
+
+def to_sql(df, datatypes, table_name, session, schema):
+    datatypes = get_alchemy_types(datatypes)
+    columns = [Column('id', Integer, primary_key=True)]
+    for i, c in enumerate(df.columns):
+        columns.append(
+            Column(c, datatypes[i])
+        )
+    table = Table(table_name, m.m, *columns, schema=schema)
+    m.m.create_all(m.engine)
+    print table_name
 
 
 def get_alchemy_types(mapped_types):
