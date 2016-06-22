@@ -18,6 +18,10 @@ schema = "mircs"
 
 
 def home(request):
+    """
+    Render a view listing all datasets found in the datasets table in the DB
+    """
+
     db = Session().connection()
     session = m.get_session()
     tables = session.query(
@@ -27,12 +31,15 @@ def home(request):
     ).all()
     session.close()
 
-    #print tables[0].original_filename
     context = {'tables': tables}
     return render(request, 'home.html', context)
 
 
 def upload_file(request):
+    """
+    Render a file upload form
+    """
+
     if request.method == 'POST':
         return HttpResponseRedirect('test_response')
     else:
@@ -41,15 +48,29 @@ def upload_file(request):
 
 
 def store_file(request):
+    """
+    Submit the file upload form and return a JSON object containing data from the file
+    """
+
     if request.method == 'POST':
         # Do some stuff
         form = Uploadfile(request.POST, request.FILES)
         if form.is_valid():
+            # Store the name of the uploaded file in the session for this request
             request.session['real_filename'] = request.FILES['file_upload'].name
+            # Generate a UUID to serve as the temporary filename, store it in the session
             request.session['temp_filename'] = str(uuid.uuid4())
+            # Store the file extension in the session
             request.session['filetype'] = os.path.splitext(request.session['real_filename'])[1]
 
-            absolute_path = os.path.join(os.path.dirname(__file__), settings.MEDIA_ROOT, request.session['temp_filename'])
+            # Figure out the path to the file location
+            absolute_path = os.path.join(
+                os.path.dirname(__file__),
+                settings.MEDIA_ROOT,
+                request.session['temp_filename']
+            )
+
+            # Parse the file using the relevant pandas read_* function
             if request.session['filetype'].lower() == '.csv':
                 df = pd.read_csv(request.FILES['file_upload'])
             elif request.session['filetype'].lower() == '.xlsx':
@@ -57,7 +78,10 @@ def store_file(request):
             else:
                 # TODO: Add a proper error handler for invalid file uploads. Probably inform the user somehow
                 raise Exception("invalid file type uploaded: %s" % request.session['filetype'])
+            # Store the file as a csv
             df.to_csv(absolute_path, index=False)
+
+            # Return the columns and the first 10 rows of the file as a JSON object
             columns = df.columns.tolist()
             rows = df[0:10].values.tolist()
             for row in rows:
@@ -70,13 +94,29 @@ def store_file(request):
 
 
 def create_table(request):
+    """
+    Submit the primary key / datatype picking page and create a database table
+    from the file that was uploaded by the store_file view
+    """
+
     if request.method == 'POST':
-        # Do some stuff
+        # Get the POST data
         post_data = dict(request.POST)
-        primary_key =  post_data['p_key']
+        # Get teh primary key from the posted data
+        primary_key = post_data['p_key']
+        # Replace any spaces in the key name with underscores
         primary_key = [x.replace(" ", "_") for x in primary_key]
-        absolute_path = os.path.join(os.path.dirname(__file__), settings.MEDIA_ROOT, request.session['temp_filename'])
+        # Figure out the path to the file that was originally uploaded
+        absolute_path = os.path.join(
+            os.path.dirname(__file__),
+            settings.MEDIA_ROOT,
+            request.session['temp_filename']  # Use the filepath stored in the session
+                                              # from when the user originally uploaded
+                                              # the file
+        )
+        # Use pandas to read the uploaded file as a CSV
         df = pd.read_csv(absolute_path)
+        # Generate a UUID to use as the table name, use replace to remove dashes
         table_name = str(uuid.uuid4()).replace("-", "")
 
         # Get an sqlalchemy session automap'ed to the database
@@ -91,10 +131,14 @@ def create_table(request):
         session.add(dataset)
         session.commit()
 
+        # Replace spaces with underscores in the column names to be used in the db table
         df.columns = [x.replace(" ", "_") for x in df.columns]
 
+        # Generate a database table based on the data found in the CSV file
         df.to_sql(table_name, Session().connection(), schema=schema, index=True, index_label="id")
-        Session().connection().execute("ALTER TABLE "+schema+".\""+table_name+"\" ADD PRIMARY KEY (id)", );
+        # Alter the table to set the id column as the primary key
+        Session().connection().execute("ALTER TABLE " + schema + ".\"" +
+                                       table_name + "\" ADD PRIMARY KEY (id)", )
         session.close()
         return redirect('/')
     else:
@@ -102,17 +146,34 @@ def create_table(request):
 
 
 def view_dataset(request, table):
+    """
+    Return a page drawing the requested dataset using an html table
+
+    Parameters:
+    table (str) - the name of the table to be displayed. This should be a UUID
+    """
     # Get a session
     session = m.get_session()
     # Get the name of the file used to create the table being queried
-    file_name = str(session.query(m.DATASETS.original_filename).filter(m.DATASETS.table_name == table).one()[0])
+    file_name = str(session.query(
+        m.DATASETS.original_filename
+    ).filter(
+        m.DATASETS.table_name == table
+    ).one()[0])  # This returns a list containing a single element(original_filename)
+                 # The [0] gets the filename out of the list
     session.close
 
     db = Session().connection()
-    df = pd.read_sql("SELECT * FROM "+schema+".\""+table+"\" LIMIT 100", db, params={'schema':schema, 'table':table})
+    # Get the first 100 rows of data out of the database for the requested dataset
+    df = pd.read_sql("SELECT * FROM " + schema + ".\"" + table + "\" LIMIT 100",
+                     db, params={'schema': schema, 'table': table})
     columns = df.columns.tolist()
     rows = df.values.tolist()
-    return render(request, 'view_dataset.html', {'dataset': rows, 'columns': columns, 'tablename':file_name})
+    return render(request, 'view_dataset.html', {
+        'dataset': rows,
+        'columns': columns,
+        'tablename': file_name
+    })
 
 
 def test_response(request):
