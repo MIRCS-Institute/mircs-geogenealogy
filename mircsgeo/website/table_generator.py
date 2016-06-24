@@ -46,15 +46,15 @@ def create_table(df, datatypes, table_name, schema):
 
 
 def insert_df(df, table, session):
-    print dir(table)
-    for row in df.to_dict('records'):
+    insert_dict = df.to_dict('records')
+    for row in insert_dict:
         for c in row:
             if pd.isnull(row[c]):
                 row[c] = None
-        session.add(
-            table(**row)
-        )
-    session.commit()
+    m.engine.execute(
+        table.__table__.insert(),
+        insert_dict
+    )
     return
 
 
