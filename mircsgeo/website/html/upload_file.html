@@ -26,10 +26,6 @@
       <form id='fileUploadForm' enctype='multipart/form-data' class="ui form" method="POST" action="/create_table">
         {% csrf_token %}
         <div class="field">
-          <label>Primary Key</label>
-          <select  name="p_key"  id="primary_key" multiple="" class="ui dropdown"></select>
-        </div>
-        <div class="field">
           <input class="ui button" type="submit" value="Submit"/>
         </div>
       </form>

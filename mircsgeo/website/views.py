@@ -116,11 +116,8 @@ def create_table(request):
         # Get the POST data
         post_data = dict(request.POST)
         # Get teh primary key from the posted data
-        primary_key = post_data['p_key']
         datatypes = post_data['datatypes'][0].split(',')
 
-        # Replace any spaces in the key name with underscores
-        primary_key = [x.replace(" ", "_") for x in primary_key]
         # Figure out the path to the file that was originally uploaded
         absolute_path = os.path.join(
             os.path.dirname(__file__),

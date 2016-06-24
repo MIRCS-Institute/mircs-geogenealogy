@@ -13,8 +13,6 @@ $( document ).ready(function() {
       processData: false,
       dataType: 'json',
       success: function(data) {
-        populatePrimaryKeyPicker($('#primary_key'), data['columns']);
-        $('select.dropdown').dropdown();
         var dataTable = $('#uploadedDataTable');
         populateDataTable(
           dataTable,
@@ -36,14 +34,6 @@ $( document ).ready(function() {
     return false;
   });
 })
-
-function populatePrimaryKeyPicker(selectElement, columns) {
-  selectElement.empty();
-  selectElement.append('<option value="">Select Primary Key Columns...</option>');
-  $.each(columns, function(k,v){
-    selectElement.append('<option value="'+v+'">'+v+'</option>');
-  });
-}
 
 function populateDataTable(tableElement, columns, rows, datatypes, possibleDatatypes) {
   console.log(datatypes);
