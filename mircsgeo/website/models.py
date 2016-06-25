@@ -45,6 +45,14 @@ dataset_transactions = Table('dataset_transactions', m,
     schema=settings.DATABASES['default']['SCHEMA'],
 )
 
+geospatial_columns = Table('geospatial_columns', m,
+    Column('id', Integer, primary_key=True),
+    Column('dataset_id', Integer),
+    Column('column_definition', String),
+    ForeignKeyConstraint(['dataset_id'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.id']),
+    schema=settings.DATABASES['default']['SCHEMA'],
+)
+
 # BOILERPLATE
 m.create_all(engine)
 m.reflect(engine)
