@@ -183,15 +183,16 @@ def view_dataset(request, table):
     rows = convert_nans(df.values.tolist())
 
     #Save north end coordinates
-    NORTHEND_COORDINATES = (44.6701, 63.6108)
+    NORTHEND_COORDINATES = (44.6701, -63.6108)
 
     # create empty map zoomed in on North end Halifax
-    map = folium.Map(location=NORTHEND_COORDINATES, zoom_start=12)
+    map = folium.Map(location=NORTHEND_COORDINATES, zoom_start=10)
 
     # add a marker for every record in the filtered data, use a clustered view
     for each in df[0:100].iterrows():
         map.simple_marker(
             location = [each[1]['LATITUDE'],each[1]['LONGITUDE']])
+        
 
     map.save(os.path.dirname(os.path.abspath(__file__)) + '/static/maps/map-'+table+'.html')
     return render(request, 'view_dataset.html', {
