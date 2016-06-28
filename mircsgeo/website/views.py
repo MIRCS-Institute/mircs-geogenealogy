@@ -189,10 +189,11 @@ def view_dataset(request, table):
     map = folium.Map(location=NORTHEND_COORDINATES, zoom_start=10)
 
     # add a marker for every record in the filtered data, use a clustered view
-    for each in df[0:100].iterrows():
-        map.simple_marker(
-            location = [each[1]['LATITUDE'],each[1]['LONGITUDE']])
-        
+    if 'LATITUDE' in df and 'LONGITUDE' in df:
+        for each in df[0:100].iterrows():
+            map.simple_marker(
+                location = [each[1]['LATITUDE'],each[1]['LONGITUDE']])
+
 
     map.save(os.path.dirname(os.path.abspath(__file__)) + '/static/maps/map-'+table+'.html')
     return render(request, 'view_dataset.html', {
