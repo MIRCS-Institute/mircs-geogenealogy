@@ -37,7 +37,7 @@ metadata = Table('metadata', m,
 transaction_types = ('add', 'modify', 'add_and_modify', 'remove')
 dataset_transactions = Table('dataset_transactions', m,
     Column('id', Integer, primary_key=True),
-    Column('dataset_id', Integer),
+    Column('dataset_uuid', String),
     Column('transaction_type', Enum(*transaction_types, name='transaction_type'), default=transaction_types[0]),
     Column('rows_affected', Integer),
     Column('affected_row_ids', ARRAY(Integer)),
