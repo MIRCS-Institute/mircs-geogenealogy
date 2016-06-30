@@ -26,7 +26,6 @@ def to_sql(df, datatypes, table_name, schema):
     create_table(df, datatypes, table_name, schema)
     session = m.get_session()
     table = getattr(m.Base.classes, table_name)
-    print table
     insert_df(df, table, session)
     session.close()
     return table
