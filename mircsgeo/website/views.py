@@ -3,6 +3,9 @@ from django.template import RequestContext
 from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 from django.conf import settings
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import func
+
+import math
 
 import website.models as m
 from .forms import Uploadfile
@@ -201,6 +204,46 @@ def view_dataset(request, table):
         'columns': columns,
         'tablename': file_name,
         'map' : '/static/maps/map-'+table+'.html'
+    })
+
+
+def get_dataset_page(request, table, page_number):
+    # Get a session
+    session = m.get_session()
+
+    # Get the object for the table we're working with
+    table = getattr(m.Base.classes, table)
+
+    # Figure out how many rows are in the dataset and calculate the number of pages
+    dataset_count = session.query(
+        func.count(table.id)
+    ).one()[0]
+    page_count = int(math.ceil(dataset_count / settings.DATASET_ITEMS_PER_PAGE))
+
+    # Calculate the id range covered by the current page
+    id_range = (
+        int(page_number) * settings.DATASET_ITEMS_PER_PAGE,
+        (int(page_number) + 1) * settings.DATASET_ITEMS_PER_PAGE
+    )
+
+    query = session.query(
+        table
+    ).filter(
+        table.id > id_range[0],
+        table.id <= id_range[1]
+    )
+
+    # Get a DataFrame with the results of the query
+    df = pd.read_sql(query.statement, query.session.bind)
+
+    columns = df.columns.tolist()
+    rows = df.values.tolist()
+    rows = convert_nans(rows)
+
+    return JsonResponse({
+        'columns': columns,
+        'rows': rows,
+        'pageCount': page_count
     })
 
 
