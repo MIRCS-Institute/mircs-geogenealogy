@@ -19,7 +19,7 @@
 
     {% for t in tables %}
         <div class="sixteen wide column">
-          <a href="/view/{{t.table_name}}">{{ t.original_filename }} - {{ t.upload_date }}</a>
+          <a href="/view/{{t.uuid}}">{{ t.original_filename }} - {{ t.upload_date }}</a>
         </div>
     {% endfor %}
 

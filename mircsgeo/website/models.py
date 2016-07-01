@@ -18,19 +18,18 @@ engine = create_engine(settings.SQLALCHEMY_CONNECT_STRING, echo=False)
 m = MetaData(schema=settings.DATABASES['default']['SCHEMA'])
 
 datasets = Table('datasets', m,
-    Column('id', Integer, primary_key=True),
+    Column('uuid', String, primary_key=True),
     Column('original_filename', String),
-    Column('table_name', String),
     Column('upload_date', DateTime),
     schema=settings.DATABASES['default']['SCHEMA'],
 )
 
 metadata = Table('metadata', m,
     Column('id', Integer, primary_key=True),
-    Column('dataset_id', Integer),
+    Column('dataset_uuid', String),
     Column('key', String),
     Column('value', String),
-    ForeignKeyConstraint(['dataset_id'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.id']),
+    ForeignKeyConstraint(['dataset_uuid'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid']),
     schema=settings.DATABASES['default']['SCHEMA'],
 )
 
@@ -41,7 +40,7 @@ dataset_transactions = Table('dataset_transactions', m,
     Column('transaction_type', Enum(*transaction_types, name='transaction_type'), default=transaction_types[0]),
     Column('rows_affected', Integer),
     Column('affected_row_ids', ARRAY(Integer)),
-    ForeignKeyConstraint(['dataset_id'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.id']),
+    ForeignKeyConstraint(['dataset_uuid'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid']),
     schema=settings.DATABASES['default']['SCHEMA'],
 )
 

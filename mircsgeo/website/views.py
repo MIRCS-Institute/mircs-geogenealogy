@@ -29,7 +29,7 @@ def home(request):
     session = m.get_session()
     tables = session.query(
         m.DATASETS.original_filename,
-        m.DATASETS.table_name,
+        m.DATASETS.uuid,
         m.DATASETS.upload_date
     ).all()
     session.close()
@@ -134,14 +134,14 @@ def create_table(request):
         df.columns = [x.replace(" ", "_") for x in df.columns]
 
         # Generate a UUID to use as the table name, use replace to remove dashes
-        table_name = str(uuid.uuid4()).replace("-", "")
+        table_uuid = str(uuid.uuid4()).replace("-", "")
 
         # Get an sqlalchemy session automap'ed to the database
         session = m.get_session()
         # Create a new dataset to be added
         dataset = m.DATASETS(
             original_filename=request.session['real_filename'],
-            table_name=table_name,
+            uuid=table_uuid,
             upload_date=datetime.datetime.now(),
         )
         # Add the dataset to the session and commit the session to the database
@@ -149,7 +149,7 @@ def create_table(request):
         session.commit()
 
         # Generate a database table based on the data found in the CSV file
-        table_generator.to_sql(df, datatypes, table_name, schema=schema)
+        table_generator.to_sql(df, datatypes, table_uuid, schema=schema)
 
         session.close()
         return redirect('/')
@@ -170,7 +170,7 @@ def view_dataset(request, table):
     file_name = str(session.query(
         m.DATASETS.original_filename
     ).filter(
-        m.DATASETS.table_name == table
+        m.DATASETS.uuid == table
     ).one()[0])  # This returns a list containing a single element(original_filename)
                  # The [0] gets the filename out of the list
     session.close
