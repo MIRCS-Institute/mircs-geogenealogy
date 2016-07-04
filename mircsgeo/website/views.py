@@ -147,8 +147,27 @@ def create_table(request):
             uuid=table_uuid,
             upload_date=datetime.datetime.now(),
         )
-        # Add the dataset to the session and commit the session to the database
+        # create a new transaction to be added
+        rows = df.values.toList()
+        ids = ()
+        for i in rows:
+            ids.add(i[0])
+        transaction = m.DATASET_TRANSACTIONS(
+            dataset_uuid=table_uuid,
+            transaction_type=m.transaction_types[0],
+            rows_affected=len(rows),
+            affected_row_ids=ids,
+        )
+        """columns = df.columns.tolist()
+        rows = df.values.tolist()
+        rows = convert_nans(rows)"""
+
+        """
+        Add the dataset and transaction to the session and commit the session
+        to the database
+        """
         session.add(dataset)
+        session.add(transaction)
         session.commit()
 
         # Generate a database table based on the data found in the CSV file
