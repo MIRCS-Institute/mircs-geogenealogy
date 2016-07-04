@@ -148,14 +148,12 @@ def create_table(request):
             upload_date=datetime.datetime.now(),
         )
         # create a new transaction to be added
-        rows = df.values.toList()
-        ids = ()
-        for i in rows:
-            ids.add(i[0])
+        ids = df.index.tolist()
+
         transaction = m.DATASET_TRANSACTIONS(
             dataset_uuid=table_uuid,
             transaction_type=m.transaction_types[0],
-            rows_affected=len(rows),
+            rows_affected=len(ids),
             affected_row_ids=ids,
         )
         """columns = df.columns.tolist()
