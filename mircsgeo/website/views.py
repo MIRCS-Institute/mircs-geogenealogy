@@ -148,7 +148,7 @@ def create_table(request):
             upload_date=datetime.datetime.now(),
         )
         # create a new transaction to be added
-        ids = df.index.tolist()
+        ids = [int(i) for i in (df.index + 1).tolist()]
 
         transaction = m.DATASET_TRANSACTIONS(
             dataset_uuid=table_uuid,

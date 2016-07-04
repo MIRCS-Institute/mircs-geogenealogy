@@ -21,7 +21,6 @@ datasets = Table('datasets', m,
     Column('uuid', String, primary_key=True),
     Column('original_filename', String),
     Column('upload_date', DateTime),
-    schema=settings.DATABASES['default']['SCHEMA'],
 )
 
 metadata = Table('metadata', m,
@@ -30,10 +29,9 @@ metadata = Table('metadata', m,
     Column('key', String),
     Column('value', String),
     ForeignKeyConstraint(['dataset_uuid'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid']),
-    schema=settings.DATABASES['default']['SCHEMA'],
 )
 
-transaction_types = ('add', 'modify', 'add_and_modify', 'remove')
+transaction_types = ('create', 'add', 'modify', 'add_and_modify', 'remove')
 dataset_transactions = Table('dataset_transactions', m,
     Column('id', Integer, primary_key=True),
     Column('dataset_uuid', String),
@@ -41,7 +39,6 @@ dataset_transactions = Table('dataset_transactions', m,
     Column('rows_affected', Integer),
     Column('affected_row_ids', ARRAY(Integer)),
     ForeignKeyConstraint(['dataset_uuid'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid']),
-    schema=settings.DATABASES['default']['SCHEMA'],
 )
 
 # BOILERPLATE
