@@ -143,8 +143,8 @@ def create_table(request):
         session = m.get_session()
         # Create a new dataset to be added
         dataset = m.DATASETS(
-            original_filename=request.session['real_filename'],
             uuid=table_uuid,
+            original_filename=request.session['real_filename'],
             upload_date=datetime.datetime.now(),
         )
         # create a new transaction to be added
@@ -226,6 +226,10 @@ def view_dataset(request, table):
     })
 
 
+def manage_dataset(request, table):
+    return 'lols'
+
+
 def get_dataset_page(request, table, page_number):
     # Get a session
     session = m.get_session()
@@ -278,6 +282,7 @@ def convert_time_columns(df, datetime_identifiers=['time', 'date']):
                 df[c] = pd.to_datetime(df[c])
     return df
 
+
 def convert_nans(rows):
     # Convert np.NaN objects to 'null' so rows is JSON serializable
     for row in rows:
@@ -285,6 +290,7 @@ def convert_nans(rows):
             if pd.isnull(e):
                 row[i] = 'null'
     return rows
+
 
 def Session():
     from aldjemy.core import get_engine

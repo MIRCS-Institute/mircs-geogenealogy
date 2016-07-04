@@ -28,7 +28,7 @@ metadata = Table('metadata', m,
     Column('dataset_uuid', String),
     Column('key', String),
     Column('value', String),
-    ForeignKeyConstraint(['dataset_uuid'], ['datasets.uuid']),
+    ForeignKeyConstraint(['dataset_uuid'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid']),
 )
 
 transaction_types = ('add', 'modify', 'add_and_modify', 'remove')
@@ -38,21 +38,21 @@ dataset_transactions = Table('dataset_transactions', m,
     Column('transaction_type', Enum(*transaction_types, name='transaction_type'), default=transaction_types[0]),
     Column('rows_affected', Integer),
     Column('affected_row_ids', ARRAY(Integer)),
-    ForeignKeyConstraint(['dataset_uuid'], ['datasets.uuid']),
+    ForeignKeyConstraint(['dataset_uuid'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid']),
 )
 
 dataset_keys = Table('dataset_keys', m,
     Column('dataset_uuid', String, primary_key=True),
     Column('constraint_name', String, primary_key=True),
     Column('constraint_author', String),
-    ForeignKeyConstraint(['dataset_uuid'], ['datasets.uuid']),
+    ForeignKeyConstraint(['dataset_uuid'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid']),
 )
 
 dataset_joins = Table('dataset_joins', m,
     Column('dataset1_uuid', String, primary_key=True),
     Column('dataset2_uuid', String, primary_key=True),
-    ForeignKeyConstraint(['dataset1_uuid'], ['datasets.uuid']),
-    ForeignKeyConstraint(['dataset2_uuid'], ['datasets.uuid']),
+    ForeignKeyConstraint(['dataset1_uuid'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid']),
+    ForeignKeyConstraint(['dataset2_uuid'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid']),
 )
 
 # BOILERPLATE
