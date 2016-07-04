@@ -31,7 +31,7 @@ metadata = Table('metadata', m,
     ForeignKeyConstraint(['dataset_uuid'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid']),
 )
 
-transaction_types = ('add', 'modify', 'add_and_modify', 'remove')
+transaction_types = ('create', 'add', 'modify', 'add_and_modify', 'remove')
 dataset_transactions = Table('dataset_transactions', m,
     Column('id', Integer, primary_key=True),
     Column('dataset_uuid', String),
