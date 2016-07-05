@@ -8,6 +8,8 @@ from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, 
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.dialects.postgresql import ARRAY
 
+import uuid
+
 import atexit
 
 # Create your models here.
@@ -49,17 +51,30 @@ dataset_keys = Table('dataset_keys', m,
 )
 
 dataset_joins = Table('dataset_joins', m,
-    Column('dataset1_uuid', String, primary_key=True),
-    Column('dataset2_uuid', String, primary_key=True),
-    ForeignKeyConstraint(['dataset1_uuid'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid']),
-    ForeignKeyConstraint(['dataset2_uuid'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid']),
+    Column('dataset1_uuid', String),
+    Column('dataset2_uuid', String),
+    ForeignKeyConstraint(
+        ['dataset1_uuid'],
+        [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid'],
+        name='fk_dataset_joins1_datasets_uuid'
+    ),
+    ForeignKeyConstraint(
+        ['dataset2_uuid'],
+        [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid'],
+        name='fk_dataset_joins2_datasets_uuid'
+    ),
 )
+
+
+def name_for_collection_relationship(base, local_cls, refered_cls, constraint):
+    uid = str(uuid.uuid4()).replace('_', '')
+    return refered_cls.__name__.lower() + "_" + uid + "_collection"
 
 # BOILERPLATE
 m.create_all(engine)
 m.reflect(engine)
 Base = automap_base(metadata=m)
-Base.prepare()
+Base.prepare(name_for_collection_relationship=name_for_collection_relationship)
 Session = sessionmaker(bind=engine)
 
 # Expose the tables that were just created
@@ -75,7 +90,7 @@ def refresh():
     global engine
     m.reflect(engine)
     Base = automap_base(metadata=m)
-    Base.prepare()
+    Base.prepare(name_for_collection_relationship=name_for_collection_relationship)
     Session = sessionmaker(bind=engine)
 
 
