@@ -20,7 +20,7 @@
     {% for t in tables %}
         <div class="sixteen wide column">
           <a href="/view/{{t.uuid}}">{{ t.original_filename }} - {{ t.upload_date }}</a>
-          <button class='ui orange basic button'>Edit</button>
+          <a class='ui orange basic button' href="/manage/{{t.uuid}}">Edit</a>
         </div>
     {% endfor %}
 

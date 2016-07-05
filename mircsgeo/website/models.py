@@ -65,7 +65,8 @@ dataset_joins = Table('dataset_joins', m,
     ),
 )
 
-
+# SAVAGE
+# Close your eyes
 def name_for_collection_relationship(base, local_cls, refered_cls, constraint):
     uid = str(uuid.uuid4()).replace('_', '')
     return refered_cls.__name__.lower() + "_" + uid + "_collection"

@@ -156,14 +156,10 @@ def create_table(request):
             rows_affected=len(ids),
             affected_row_ids=ids,
         )
-        """columns = df.columns.tolist()
-        rows = df.values.tolist()
-        rows = convert_nans(rows)"""
 
-        """
-        Add the dataset and transaction to the session and commit the session
-        to the database
-        """
+
+        # Add the dataset and transaction to the session and commit the session
+        # to the database
         session.add(dataset)
         session.add(transaction)
         session.commit()
