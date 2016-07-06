@@ -45,24 +45,30 @@ dataset_transactions = Table('dataset_transactions', m,
 
 dataset_keys = Table('dataset_keys', m,
     Column('dataset_uuid', String, primary_key=True),
-    Column('constraint_name', String, primary_key=True),
+    Column('dataset_column', String, primary_key=True),
     Column('constraint_author', String),
     ForeignKeyConstraint(['dataset_uuid'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid']),
 )
 
 dataset_joins = Table('dataset_joins', m,
-    Column('dataset1_uuid', String),
-    Column('dataset2_uuid', String),
+    Column('dataset1_uuid', String, primary_key=True),
+    Column('dataset1_column', String, primary_key=True),
+    Column('dataset2_uuid', String, primary_key=True),
+    Column('dataset2_column', String, primary_key=True),
     ForeignKeyConstraint(
-        ['dataset1_uuid'],
-        [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid'],
-        name='fk_dataset_joins1_datasets_uuid'
+        ['dataset1_uuid', 'dataset1_column'],
+        [
+            settings.DATABASES['default']['SCHEMA'] + '.dataset_keys.dataset_uuid',
+            settings.DATABASES['default']['SCHEMA'] + '.dataset_keys.dataset_column'
+        ]
     ),
     ForeignKeyConstraint(
-        ['dataset2_uuid'],
-        [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid'],
-        name='fk_dataset_joins2_datasets_uuid'
-    ),
+        ['dataset2_uuid', 'dataset2_column'],
+        [
+            settings.DATABASES['default']['SCHEMA'] + '.dataset_keys.dataset_uuid',
+            settings.DATABASES['default']['SCHEMA'] + '.dataset_keys.dataset_column'
+        ]
+    )
 )
 
 # SAVAGE

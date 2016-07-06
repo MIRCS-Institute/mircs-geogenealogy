@@ -216,12 +216,16 @@ def view_dataset(request, table):
         'dataset': rows,
         'columns': columns,
         'tablename': file_name,
-        'map' : '/static/maps/map-'+table+'.html'
+        'map': '/static/maps/map-'+table+'.html'
     })
 
 
 def manage_dataset(request, table):
     return 'lols'
+
+
+def add_dataset_key(request, table):
+    return render(request, 'add_dataset_key.html', {})
 
 
 def get_dataset_page(request, table, page_number):
