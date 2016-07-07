@@ -46,6 +46,7 @@ dataset_transactions = Table('dataset_transactions', m,
 dataset_keys = Table('dataset_keys', m,
     Column('dataset_uuid', String, primary_key=True),
     Column('dataset_column', String, primary_key=True),
+    Column('index_name', String),
     Column('constraint_author', String),
     ForeignKeyConstraint(['dataset_uuid'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid']),
 )
