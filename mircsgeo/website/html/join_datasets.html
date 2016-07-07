@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+
+{% block externalLibraries %}
+<link rel="stylesheet" href="{% static 'css/upload_file.css' %}">
+{% endblock %}
+
+{% block title %}Join Datasets{% endblock %}
+
+{% block content %}
+
+<div class="ui container">
+  <div class="ui segments">
+    <div class="ui segment">
+      <h1>Join Datasets</h1>
+    </div>
+    <div class="ui segment">
+      <form id="joinDatasetsForm"class="ui form" action="" method="post">
+        {% csrf_token %}
+
+        <div class="two fields">
+
+          <div class="field">
+            <label>Main Dataset</label>
+            <select class="dropdown" name="main_dataset">
+              <option value="">Choose a dateset...</option>
+              {% for t in tables %}
+                {% if t.uuid == main %}
+                  <option selected value="{{ t.uuid }}">{{ t.original_filename }} - {{ t.upload_date }}</option>
+                {% else %}
+                  <option value="{{ t.uuid }}">{{ t.original_filename }} - {{ t.upload_date }}</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label>Joining Dataset</label>
+            <select class="dropdown" name="joining_dataset">
+              <option value="">Choose a dataset...</option>
+              {% for t in tables %}
+                <option value="{{ t.uuid }}">{{ t.original_filename }} - {{ t.upload_date }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="two fields">
+          <div class="field">
+            <select class="dropdown" name="main_key">
+              <option value="">Choose a key...</option>
+            </select>
+          </div>
+          <div class="field">
+            <select class="dropdown" name="joining_key">
+              <option value="">Choose a key...</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <input class="ui button green" type="submit" value="Submit"/>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<script type="text/javascript">
+$('select.dropdown').dropdown();
+</script>
+
+{% endblock %}

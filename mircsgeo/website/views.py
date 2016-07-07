@@ -268,6 +268,19 @@ def get_dataset_page(request, table, page_number):
     })
 
 
+def join_datasets(request, table):
+    db = Session().connection()
+    session = m.get_session()
+    tables = session.query(
+        m.DATASETS.original_filename,
+        m.DATASETS.uuid,
+        m.DATASETS.upload_date
+    ).all()
+    session.close()
+
+    context = {'tables': tables, 'main':table}
+    return render(request, 'join_datasets.html', context)
+
 def test_response(request):
     return HttpResponse('yay')
 
