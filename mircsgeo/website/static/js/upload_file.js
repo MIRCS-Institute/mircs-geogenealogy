@@ -29,36 +29,44 @@ $( document ).ready(function() {
           var input = $('<input>').attr({'type':'hidden','name':'datatypes'}).val(datatypes);
           $(this).append(input);
 
+          var geospatial_columns = $("#geospatialColumnsContainer").find('.geospatialColumnForm');
+          geospatial_col_return = [];
+          for(var i=0; i<geospatial_columns.length; i++) {
+            geospatial_col_return.push($(geospatial_columns[i]).serialize());
+          }
+          var input = $('<input>').attr({'type':'hidden','name':'geospatial_columns'}).val(geospatial_col_return);
+          $(this).append(input);
         });
 
         $('#Geocolumns').click(function(event ){
           //generate the form
           var form = $("<form class='ui form geospatialColumnForm'></form>")
-          var GeospatialCol_name = $("<label for='GeospatialCol_name'> GeoSpatial Column Name: <label/><input/>", {type: 'text',id: 'GeospatialCol_name'
-                                        ,name: 'Name',default: 'geom'});
-
-          var GeoCol_type = $( "<label for='GeoCol_type'> GeoSpatial Type: </label><input/>",{type:'text', id: 'GeoCol_type', name: 'Type', default: 'latlon'});
-
-          var lat_col = $( "<label for='lat_col'> Select Latitude</label><select id=\"lat_col\"/>",{type:'dropdown', name: 'LATITUDE', placeholder: 'Select latitude'});
-
-          var lon_col = $("<label for='lon_col'> Select Longitude</label><select id=\"lon_col\"/>",{type:'dropdown', name: 'LONGITUDE', placeholder: 'Select longitude'});
-
-          var srid = $("<label for='srid'> SRID: </label><input/>", {type: 'text',id: 'srid',name: 'srid',default: '4326'});
-
-
+          form.append($("<label for='GeospatialCol_name'> GeoSpatial Column Name: <label/>"));
+          var GeospatialCol_name = $("<input type='text' id='GeospatialCol_name' name='name' value='geom'></input>");
           form.append(GeospatialCol_name);
-          form.append(GeoCol_type);
-          form.append(lat_col);
-          form.append(lon_col);
-          form.append(srid);
-          console.log(form);
-          $("#geospatialColumnsContainer").append(form);
+
+
+          var lat_col = $( "<select id='lat_col' name='lat_col'></select>");
+          var lon_col = $("<select id='lon_col' name='lon_col'></select>");
 
           $.each(data['columns'],function(key,value){
-            $('#lat_col').append($("<option></option>").attr("value",key).text(value));
-            $('#lon_col').append($("<option></option>").attr("value",key).text(value));
+            lat_col.append($("<option></option>").attr("value",key).text(value));
+            lon_col.append($("<option></option>").attr("value",key).text(value));
           });
 
+          form.append($("<label for='lat_col'> Select Latitude</label>"));
+          form.append(lat_col);
+          form.append($("<label for='lon_col'> Select Longitude</label>"));
+          form.append(lon_col);
+
+          form.append($("<label for='srid'> SRID: </label>"));
+          var srid = $("<input type='text' id='srid' name='srid' value='4326'></input>");
+          form.append(srid);
+
+          var GeoCol_type = $( "<input></input>",{'type':'hidden', 'id': 'GeoCol_type', 'name': 'type', 'default': 'latlon'});
+          form.append(GeoCol_type);
+
+          $("#geospatialColumnsContainer").append(form);
 
         });
       }
