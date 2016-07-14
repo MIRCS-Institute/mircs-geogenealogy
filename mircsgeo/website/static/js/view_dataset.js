@@ -113,8 +113,34 @@ $( document ).ready(function() {
   }
 
   function populateMap(map, data) {
-    var group = L.geoJson(data).addTo(map);
+    var geojsonMarkerOptions = {
+      radius: 8,
+      fillColor: "#FF9639",
+      color: "#000",
+      weight: 1,
+      opacity: 1,
+      fillOpacity: 0.8
+    };
+    var group = L.geoJson(data,{
+      onEachFeature: onEachFeature,
+      pointToLayer: function (feature, latlng) {
+          return L.circleMarker(latlng, geojsonMarkerOptions);
+    }}).addTo(map);
     map.fitBounds(group.getBounds());
     return group;
+  }
+
+  function onEachFeature(feature, layer) {
+    var pOptions = {
+      maxHeight: 80
+    };
+    if (feature.properties) {
+      var popupText = "";
+      $.each(feature.keys, function(key, val){
+        popupText += "<strong>"+val  + "</strong>: " + feature.properties[val] +"<br/>";
+      });
+      layer.bindPopup(popupText, pOptions);
+
+    }
   }
 });

@@ -458,7 +458,8 @@ def get_dataset_geojson(request, table, page_number):
         geojson.append({
             'type': 'Feature',
             'properties': properties,
-            'geometry': json.loads(geometry)
+            'geometry': json.loads(geometry),
+            'keys': sorted(properties.keys())
         })
     return JsonResponse(geojson, safe=False)
 
