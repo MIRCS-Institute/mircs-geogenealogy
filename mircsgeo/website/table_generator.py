@@ -59,7 +59,7 @@ def insert_df(df, table, session, geospatial_columns=None):
                 row[c] = None
         if geospatial_columns is not None:
             for c in geospatial_columns:
-                row[c['name']] = 'SRID=%s;POINT(%s %s)' % (c['srid'], row[c['lat_col']], row[c['lon_col']])
+                row[c['name']] = 'SRID=%s;POINT(%s %s)' % (c['srid'], row[c['lon_col']], row[c['lat_col']])
     m.engine.execute(
         table.__table__.insert(),
         insert_dict

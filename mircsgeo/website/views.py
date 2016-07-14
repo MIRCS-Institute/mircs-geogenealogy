@@ -453,8 +453,10 @@ def get_dataset_geojson(request, table, page_number):
     data = pd.read_sql(geojson.statement, geojson.session.bind)[0:400]
     geo_column_names.append('geometry')
 
+    # Build some properly formatted geojson to pass into leaflet
     geojson = []
     for i, r in data.iterrows():
+        # Geometry and properties are both required for a 'Feature' object.
         geometry = r['geometry']
         properties = r.drop(geo_column_names).to_dict()
         geojson.append({
