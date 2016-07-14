@@ -29,7 +29,7 @@
     <div class="ui segment">
       <div class="sixteen wide column">
         <div id='primaryKeyPicker' style="display:none;">
-          <form id='fileUploadForm' enctype='multipart/form-data' class="ui form" method="POST" action="/manage_dataset/append_dataset">
+          <form id='fileUploadForm' enctype='multipart/form-data' class="ui form" method="POST" action="/manage/{{ table }}">
             {% csrf_token %}
             <div class="field">
               <input class="ui button green" type="submit" value="Submit"/>

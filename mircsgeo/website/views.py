@@ -226,9 +226,23 @@ def manage_dataset(request, table):
 
     Parameters:
     table (str) - the name of the table to be displayed. This should be a UUID
+    tablename (str) - original filename of uploaded table
     """
+
+    # Get a session
+    session = m.get_session()
+    # Get the name of the file used to create the table being queried
+    file_name = str(session.query(
+        m.DATASETS.original_filename
+    ).filter(
+        m.DATASETS.uuid == table
+    ).one()[0])  # This returns a list containing a single element(original_filename)
+                 # The [0] gets the filename out of the list
+    session.close
+
     return render(request, 'manage_dataset.html', {
-        'tablename': table
+        'tablename': file_name,
+        'table': table
     })
 
 def append_dataset(request, table):
@@ -259,9 +273,16 @@ def append_dataset(request, table):
         df.columns = [x.replace(" ", "_") for x in df.columns]
         # Get a session
         session = m.get_session()
-        insert_df(df, table, session)
+        table = getattr(m.Base.classes, table)
+        table_generator.insert_df(df, table, session)
         session.close()
-        return redirect('/')
+        return redirect('/manage/'+table)
+    else:
+        form = Uploadfile()
+        return render(request, 'append_dataset.html', {
+            'form': form,
+            'table': table
+        })
 
 def get_dataset_page(request, table, page_number):
     # Get a session

@@ -4,7 +4,7 @@ $( document ).ready(function() {
       var formData = new FormData($('#fileUploadForm')[0]);
       console.log(formData);
       $.ajax({
-        url: 'store_file',
+        url: '/store_file',
         type: 'POST',
         data: formData,
         async: false,
