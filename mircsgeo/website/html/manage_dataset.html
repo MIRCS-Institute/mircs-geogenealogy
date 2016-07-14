@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+{% block externalLibraries %}
+<script src="{% static 'js/createTable.js' %}"></script>
+<script src="{% static 'js/view_dataset.js' %}"></script>
+{% endblock %}
+
+{% block title %}Manage Dataset{% endblock %}
+{% block content %}
+<div class="ui container">
+  <div class="ui segments">
+    <div class="ui segment">
+      <h1 class="ui header">{{ tablename }}</h1>
+    </div>
+    <div class="ui segment">
+        <div class="ui link list">
+            <a href="/manage/append/{{table}}" class="item">Append Data</a>
+<!--            <a href="/manage/join/{{tablename.uuid}}" class="item">Join Data</a>-->
+        </div>
+    </div>
+
+  </div>
+</div>
+
+
+
+{% endblock %}

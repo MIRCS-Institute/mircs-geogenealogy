@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+
+{% block externalLibraries %}
+<link rel="stylesheet" href="{% static 'css/upload_file.css' %}">
+<script src="{% static 'js/createTable.js' %}"></script>
+<script src="{% static 'js/upload_file.js' %}"></script>
+{% endblock %}
+
+{% block title %}Append Data{% endblock %}
+
+{% block content %}
+<div class="ui container">
+  <div class="ui segments">
+    <div class="ui segment">
+      <div class="ui inverted dimmer">
+        <div class="ui text loader">Loading ... </div>
+      </div>
+        <h1 class="ui header">Upload file to append</h1>
+        <div id='uploader'>
+        <form id='fileUploadForm' enctype='multipart/form-data' class="ui form">
+          {% csrf_token %}
+          <div class="ui input">
+            {{ form }}
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="ui segment">
+      <div class="sixteen wide column">
+        <div id='primaryKeyPicker' style="display:none;">
+          <form id='fileUploadForm' enctype='multipart/form-data' class="ui form" method="POST" action="/manage/{{ table }}">
+            {% csrf_token %}
+            <div class="field">
+              <input class="ui button green" type="submit" value="Submit"/>
+            </div>
+          </form>
+
+          <h3 class="ui header">Dataset</h3>
+
+          <table id='uploadedDataTable' class="ui celled striped table stackable">
+          </table>
+        </div>
+        <div id='uploadConfirmation'></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

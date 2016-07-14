@@ -1,6 +1,9 @@
+
+
 $( document ).ready(function() {
   $.getJSON('/get_dataset_page/' + getTableFromURL() + '/0/', function(data) {
     insertDatasetPage(data, 0);
+    buildMap(data);
   });
 });
 
@@ -90,4 +93,19 @@ function buildPagePicker(parentElement, pageCount, selected) {
     parentElement.append(linkElement);
   }
   parentElement.append('<a id="nextPage" class="item">Next</a>');
+}
+
+function buildMap(data) {
+  var map = L.map('dataMap').setView([data['lat'], data['lon']], 13);
+  L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 20}).addTo(map);
+  createMapPoints(data, map);
+}
+
+function createMapPoints(data, map){
+  //markers.clearLayers();
+  $.each(data['rows'], function(v){
+    console.log(" "+v);
+  });
 }
