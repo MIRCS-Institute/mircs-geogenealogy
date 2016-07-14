@@ -256,11 +256,15 @@ def get_dataset_page(request, table, page_number):
     columns = df.columns.tolist()
     rows = df.values.tolist()
     rows = convert_nans(rows)
+    median_lat = df.LATITUDE.median()
+    median_lon = df.LONGITUDE.median()
 
     return JsonResponse({
         'columns': columns,
         'rows': rows,
-        'pageCount': page_count
+        'pageCount': page_count,
+        'lat': median_lat,
+        'lon': median_lon
     })
 
 
