@@ -5,7 +5,9 @@ from django.conf import settings
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.schema import Index
 from sqlalchemy import func
-import geoalchemy2.functions as func
+import geoalchemy2.functions as geofunc
+
+import json
 
 import math
 
@@ -438,17 +440,30 @@ def get_dataset_geojson(request, table, page_number):
     geo = m.GEOSPATIAL_COLUMNS
     geospatial_columns = session.query(geo.column).filter(geo.dataset_uuid == table).all()
     geo_column_objects = []
+    geo_column_names = []
     for col in geospatial_columns:
-        geo_column_objects.append(func.ST_AsGeoJSON(getattr(t, col[0])))
+        geo_column_objects.append(geofunc.ST_AsGeoJSON(getattr(t, col[0])))
+        geo_column_names.append(col[0])
 
     # build up geospatial select functions
     # Note: we're just grabbing the first geospatial column right now
     #       a picker for geo columns might be desirable someday
-    geojson = session.query(t, geo_column_objects[0].label('geojson'))
+    geojson = session.query(t, geo_column_objects[0].label('geometry'))
     # Get a DataFrame with the results of the query
-    data = pd.read_sql(geojson.statement, geojson.session.bind)
+    data = pd.read_sql(geojson.statement, geojson.session.bind)[0:400]
+    geo_column_names.append('geometry')
+
     geojson = []
-    print data.iloc[0]['geojson']
+    for i, r in data.iterrows():
+        geometry = r['geometry']
+        properties = r.drop(geo_column_names).to_dict()
+        geojson.append({
+            'type': 'Feature',
+            'properties': properties,
+            'geometry': json.loads(geometry)
+        })
+    return JsonResponse(geojson, safe=False)
+
 
 
 

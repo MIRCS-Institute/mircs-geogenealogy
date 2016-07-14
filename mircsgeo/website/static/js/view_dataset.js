@@ -1,9 +1,12 @@
 
 
 $( document ).ready(function() {
+  var map = L.map('dataMap');
   $.getJSON('/get_dataset_page/' + getTableFromURL() + '/0/', function(data) {
     insertDatasetPage(data, 0);
-    var map = initMap('dataMap', data);
+    initMap(map, data);
+  });
+  $.getJSON('/get_dataset_geojson/' + getTableFromURL() + '/0/', function(data) {
     populateMap(map, data);
   });
 });
@@ -94,8 +97,9 @@ function buildPagePicker(parentElement, pageCount, selected) {
   parentElement.append('<a id="nextPage" class="item">Next</a>');
 }
 
-function initMap(divId, data) {
-  var map = L.map(divId).setView([data['lat'], data['lon']], 13);
+function initMap(map, data) {
+  // .setView([data['lat'], data['lon']], 13)
+  var map = map.setView([data['lat'], data['lon']], 13);
   L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom: 20}).addTo(map);
@@ -103,5 +107,6 @@ function initMap(divId, data) {
 }
 
 function populateMap(map, data) {
-  console.log(data);
+  var group = L.geoJson(data).addTo(map);
+  map.fitBounds(group.getBounds());
 }
