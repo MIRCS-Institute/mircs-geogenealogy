@@ -3,12 +3,13 @@ from django.template import RequestContext
 from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 from django.conf import settings
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.schema import Index
 from sqlalchemy import func
 
 import math
 
 import website.models as m
-from .forms import Uploadfile
+from .forms import Uploadfile, AddDatasetKey
 
 import pandas as pd
 
@@ -225,7 +226,47 @@ def manage_dataset(request, table):
 
 
 def add_dataset_key(request, table):
-    return render(request, 'add_dataset_key.html', {})
+    print request.POST
+    if request.method == 'POST':
+        # Get the POST parameter
+        post_data = dict(request.POST)
+        dataset_columns = post_data['dataset_columns']
+
+        # Get the table
+        t = getattr(m.Base.classes, table)
+
+        # Get the column objects for each selected column in the POST parameter
+        column_objects = []
+        for col in dataset_columns:
+            column_objects.append(getattr(t.__table__.columns, col))
+
+        # Build up a standard name for the index
+        index_name = '%s_' % table
+        for col in dataset_columns:
+            index_name += '%s_' % col
+        index_name += 'idx'
+
+        # Create an sqlalchemy Index object
+        index = Index(index_name, *column_objects)
+        index.create(m.engine)
+
+        # Create an entry in dataset_keys
+        session = m.get_session()
+        dataset_key = m.DATASET_KEYS(
+            dataset_uuid=table,
+            index_name=index_name,
+            dataset_columns=dataset_columns
+        )
+        session.add(dataset_key)
+        session.commit()
+        session.close()
+
+        # This will eventually redirect to the manage_dataset page
+        return redirect('/')
+    else:
+        columns = [str(x).split('.')[1] for x in getattr(m.Base.classes, table).__table__.columns]
+        form = AddDatasetKey(zip(columns, columns))
+        return render(request, 'add_dataset_key.html', {'form': form})
 
 
 def get_dataset_page(request, table, page_number):

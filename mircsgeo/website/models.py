@@ -45,29 +45,30 @@ dataset_transactions = Table('dataset_transactions', m,
 
 dataset_keys = Table('dataset_keys', m,
     Column('dataset_uuid', String, primary_key=True),
-    Column('dataset_column', String, primary_key=True),
-    Column('index_name', String),
+    Column('index_name', String, primary_key=True),
+    Column('dataset_columns', ARRAY(String)),
     Column('constraint_author', String),
     ForeignKeyConstraint(['dataset_uuid'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid']),
 )
 
 dataset_joins = Table('dataset_joins', m,
-    Column('dataset1_uuid', String, primary_key=True),
-    Column('dataset1_column', String, primary_key=True),
-    Column('dataset2_uuid', String, primary_key=True),
-    Column('dataset2_column', String, primary_key=True),
+    Column('id', Integer, primary_key=True),
+    Column('dataset1_uuid', String),
+    Column('index1_name', String),
+    Column('dataset2_uuid', String),
+    Column('index2_name', String),
     ForeignKeyConstraint(
-        ['dataset1_uuid', 'dataset1_column'],
+        ['dataset1_uuid', 'index1_name'],
         [
             settings.DATABASES['default']['SCHEMA'] + '.dataset_keys.dataset_uuid',
-            settings.DATABASES['default']['SCHEMA'] + '.dataset_keys.dataset_column'
+            settings.DATABASES['default']['SCHEMA'] + '.dataset_keys.index_name'
         ]
     ),
     ForeignKeyConstraint(
-        ['dataset2_uuid', 'dataset2_column'],
+        ['dataset2_uuid', 'index2_name'],
         [
             settings.DATABASES['default']['SCHEMA'] + '.dataset_keys.dataset_uuid',
-            settings.DATABASES['default']['SCHEMA'] + '.dataset_keys.dataset_column'
+            settings.DATABASES['default']['SCHEMA'] + '.dataset_keys.index_name'
         ]
     )
 )
@@ -89,6 +90,8 @@ Session = sessionmaker(bind=engine)
 DATASETS = Base.classes.datasets
 METADATA = Base.classes.metadata
 DATASET_TRANSACTIONS = Base.classes.dataset_transactions
+DATASET_KEYS = Base.classes.dataset_keys
+DATASET_JOINS = Base.classes.dataset_joins
 
 
 def refresh():
