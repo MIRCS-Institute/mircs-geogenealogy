@@ -282,12 +282,14 @@ def append_dataset(request, table):
         df = convert_time_columns(df)
         # Replace spaces with underscores in the column names to be used in the db table
         df.columns = [x.replace(" ", "_") for x in df.columns]
+
         # Get a session
         session = m.get_session()
+        tablename = table
         table = getattr(m.Base.classes, table)
         table_generator.insert_df(df, table, session)
         session.close()
-        return redirect('/manage/'+table)
+        return redirect('/manage/'+tablename)
     else:
         form = Uploadfile()
         return render(request, 'append_dataset.html', {
@@ -381,11 +383,31 @@ def get_dataset_page(request, table, page_number):
         'lon': median_lon
     })
 
-
+'''
+Join Datsets
+'''
 def join_datasets(request, table):
+    # If the method is post write the join to the datbase
     if request.method == "POST":
-        return None
+        # Get the POST data
+        post_data = dict(request.POST)
+
+        # Get the sqlalchemy sesssion and create the dataset_join object
+        session = m.get_session()
+        dataset_join = m.DATASET_JOINS(
+            dataset1_uuid=post_data['main_dataset'][0],
+            index1_name=post_data['main_key'][0],
+            dataset2_uuid=post_data['joining_dataset'][0],
+            index2_name=post_data['joining_key'][0]
+        )
+        # Commit the object to the database
+        session.add(dataset_join)
+        session.commit()
+        session.close()
+        # Return to the tables dataset manage page
+        return redirect('/manage/'+table)
     else:
+        # If the Request is GET, get the datasets
         session = m.get_session()
         tables = session.query(
             m.DATASETS.original_filename,
@@ -393,6 +415,7 @@ def join_datasets(request, table):
             m.DATASETS.upload_date
         ).all()
 
+        # Get the table datasets keys
         keys = session.query(
             m.DATASET_KEYS
         ).filter(
@@ -400,9 +423,13 @@ def join_datasets(request, table):
         )
         session.close()
 
+        # Return to the manage/join page
         context = {'tables': tables, 'main':table, 'keys': keys}
         return render(request, 'join_datasets.html', context)
 
+'''
+Get Table Keys
+'''
 def get_dataset_keys(request, table):
     session = m.get_session()
     query = session.query(
@@ -412,8 +439,10 @@ def get_dataset_keys(request, table):
     )
     session.close()
     df = pd.read_sql(query.statement,query.session.bind)
-    keys = df.to_dict(orient='index')
-    return JsonResponse({'keys':str(keys)})
+    keys = []
+    for index, row in df.iterrows():
+        keys.append([row['index_name'], row['dataset_columns']])
+    return JsonResponse({'keys':keys})
 
 
 def test_response(request):

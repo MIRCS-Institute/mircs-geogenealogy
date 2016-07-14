@@ -23,7 +23,7 @@
 
           <div class="field">
             <label>Main Dataset</label>
-            <select class="dropdown dataset" name="main_dataset">
+            <select class="dropdown dataset" name="main_dataset" data-key="main_key">
               <option value="">Choose a dateset...</option>
               {% for t in tables %}
                 {% if t.uuid == main %}
@@ -36,7 +36,7 @@
           </div>
           <div class="field">
             <label>Joining Dataset</label>
-            <select class="dropdown dataset" name="joining_dataset">
+            <select class="dropdown dataset" name="joining_dataset" data-key="joining_key">
               <option value="">Choose a dataset...</option>
               {% for t in tables %}
                 <option value="{{ t.uuid }}">{{ t.original_filename }} - {{ t.upload_date }}</option>
@@ -49,12 +49,19 @@
             <select class="dropdown" name="main_key">
               <option value="">Choose a key...</option>
               {% for k in keys %}
-                <option value="{{ k.index_name }}">{{ k.dataset_columns }}</option>
+                <option value="{{ k.index_name }}">
+                  {% for c in k.dataset_columns %}
+                     {{ c }}
+                     {% if not forloop.last %}
+                          ,
+                     {% endif %}
+                  {% endfor %}
+                </option>
               {% endfor %}
             </select>
           </div>
           <div class="field">
-            <select class="dropdown" name="joining_key">
+            <select class="dropdown" name="joining_key" id="joining_key">
               <option value="">Choose a key...</option>
             </select>
           </div>
