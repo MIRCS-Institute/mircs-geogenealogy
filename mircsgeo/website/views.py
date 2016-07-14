@@ -5,6 +5,7 @@ from django.conf import settings
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.schema import Index
 from sqlalchemy import func
+import geoalchemy2.functions as func
 
 import math
 
@@ -123,6 +124,12 @@ def create_table(request):
         # Get teh primary key from the posted data
         datatypes = post_data['datatypes'][0].split(',')
 
+        # Get an sqlalchemy session automap'ed to the database
+        session = m.get_session()
+
+        # Generate a UUID to use as the table name, use replace to remove dashes
+        table_uuid = str(uuid.uuid4()).replace("-", "")
+
         # Parse the string returned from the form
         geospatial_string = post_data['geospatial_columns'][0]
         geospatial_columns = []
@@ -131,7 +138,15 @@ def create_table(request):
             for field in column.split('&'):
                 field = field.split('=')
                 c[field[0]] = field[1]
+
             geospatial_columns.append(c)
+
+            geo_col = m.GEOSPATIAL_COLUMNS(
+                dataset_uuid=table_uuid,
+                column=c['name']
+            )
+            session.add(geo_col)
+
 
         # Figure out the path to the file that was originally uploaded
         absolute_path = os.path.join(
@@ -147,11 +162,7 @@ def create_table(request):
         # Replace spaces with underscores in the column names to be used in the db table
         df.columns = [x.replace(" ", "_") for x in df.columns]
 
-        # Generate a UUID to use as the table name, use replace to remove dashes
-        table_uuid = str(uuid.uuid4()).replace("-", "")
 
-        # Get an sqlalchemy session automap'ed to the database
-        session = m.get_session()
         # Create a new dataset to be added
         dataset = m.DATASETS(
             uuid=table_uuid,
@@ -403,6 +414,7 @@ def join_datasets(request, table):
         context = {'tables': tables, 'main':table, 'keys': keys}
         return render(request, 'join_datasets.html', context)
 
+
 def get_dataset_keys(request, table):
     session = m.get_session()
     query = session.query(
@@ -414,6 +426,30 @@ def get_dataset_keys(request, table):
     df = pd.read_sql(query.statement,query.session.bind)
     keys = df.to_dict(orient='index')
     return JsonResponse({'keys':str(keys)})
+
+
+def get_dataset_geojson(request, table, page_number):
+    # Get a session
+    session = m.get_session()
+
+    t = getattr(m.Base.classes, table)
+
+    # Get geospatial columns
+    geo = m.GEOSPATIAL_COLUMNS
+    geospatial_columns = session.query(geo.column).filter(geo.dataset_uuid == table).all()
+    geo_column_objects = []
+    for col in geospatial_columns:
+        geo_column_objects.append(func.ST_AsGeoJSON(getattr(t, col[0])))
+
+    # build up geospatial select functions
+    # Note: we're just grabbing the first geospatial column right now
+    #       a picker for geo columns might be desirable someday
+    geojson = session.query(t, geo_column_objects[0].label('geojson'))
+    # Get a DataFrame with the results of the query
+    data = pd.read_sql(geojson.statement, geojson.session.bind)
+    geojson = []
+    print data.iloc[0]['geojson']
+
 
 
 def test_response(request):

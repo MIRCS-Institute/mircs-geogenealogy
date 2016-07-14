@@ -3,7 +3,8 @@
 $( document ).ready(function() {
   $.getJSON('/get_dataset_page/' + getTableFromURL() + '/0/', function(data) {
     insertDatasetPage(data, 0);
-    buildMap(data);
+    var map = initMap('dataMap', data);
+    populateMap(map, data);
   });
 });
 
@@ -26,8 +27,6 @@ function insertDatasetPage(data, selected) {
           target_page = current_page;
         }
       } else if(link_value === 'Next') {
-        console.log(current_page);
-        console.log(data['pageCount']);
         if(current_page < data['pageCount']) {
           target_page = 1 + current_page;
         } else {
@@ -95,17 +94,14 @@ function buildPagePicker(parentElement, pageCount, selected) {
   parentElement.append('<a id="nextPage" class="item">Next</a>');
 }
 
-function buildMap(data) {
-  var map = L.map('dataMap').setView([data['lat'], data['lon']], 13);
+function initMap(divId, data) {
+  var map = L.map(divId).setView([data['lat'], data['lon']], 13);
   L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom: 20}).addTo(map);
-  createMapPoints(data, map);
+  return map;
 }
 
-function createMapPoints(data, map){
-  //markers.clearLayers();
-  $.each(data['rows'], function(v){
-    console.log(" "+v);
-  });
+function populateMap(map, data) {
+  console.log(data);
 }

@@ -54,7 +54,7 @@ dataset_keys = Table('dataset_keys', m,
 geospatial_columns = Table('geospatial_columns', m,
     Column('id', Integer, primary_key=True),
     Column('dataset_uuid', String),
-    Column('column_definition', String),
+    Column('column', String),
     ForeignKeyConstraint(['dataset_uuid'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid']),
     schema=settings.DATABASES['default']['SCHEMA'],
 )
@@ -99,6 +99,7 @@ DATASETS = Base.classes.datasets
 METADATA = Base.classes.metadata
 DATASET_TRANSACTIONS = Base.classes.dataset_transactions
 DATASET_KEYS = Base.classes.dataset_keys
+GEOSPATIAL_COLUMNS = Base.classes.geospatial_columns
 DATASET_JOINS = Base.classes.dataset_joins
 
 
