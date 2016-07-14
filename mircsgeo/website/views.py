@@ -291,8 +291,11 @@ def convert_nans(rows):
     # Convert np.NaN objects to 'null' so rows is JSON serializable
     for row in rows:
         for i, e in enumerate(row):
-            if pd.isnull(e):
-                row[i] = 'null'
+            try:
+                if pd.isnull(e):
+                    row[i] = 'null'
+            except TypeError as err:
+                row[i] = str(e)
     return rows
 
 
