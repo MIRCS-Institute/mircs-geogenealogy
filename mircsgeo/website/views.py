@@ -119,6 +119,16 @@ def create_table(request):
         # Get teh primary key from the posted data
         datatypes = post_data['datatypes'][0].split(',')
 
+        # Parse the string returned from the form
+        geospatial_string = post_data['geospatial_columns'][0]
+        geospatial_columns = []
+        for column in geospatial_string.split(','):
+            c = {}
+            for field in column.split('&'):
+                field = field.split('=')
+                c[field[0]] = field[1]
+            geospatial_columns.append(c)
+
         # Figure out the path to the file that was originally uploaded
         absolute_path = os.path.join(
             os.path.dirname(__file__),
@@ -149,7 +159,7 @@ def create_table(request):
         session.commit()
 
         # Generate a database table based on the data found in the CSV file
-        table_generator.to_sql(df, datatypes, table_name, schema=schema)
+        table_generator.to_sql(df, datatypes, table_name, schema, geospatial_columns)
 
         session.close()
         return redirect('/')
@@ -191,15 +201,15 @@ def view_dataset(request, table):
     # add a marker for every record in the filtered data, use a clustered view
     for each in df[0:100].iterrows():
         map.simple_marker(
-            location = [each[1]['LATITUDE'],each[1]['LONGITUDE']])
-        
+            location=[each[1]['LATITUDE'], each[1]['LONGITUDE']])
+
 
     map.save(os.path.dirname(os.path.abspath(__file__)) + '/static/maps/map-'+table+'.html')
     return render(request, 'view_dataset.html', {
         'dataset': rows,
         'columns': columns,
         'tablename': file_name,
-        'map' : '/static/maps/map-'+table+'.html'
+        'map' : '/static/maps/map-' + table + '.html'
     })
 
 

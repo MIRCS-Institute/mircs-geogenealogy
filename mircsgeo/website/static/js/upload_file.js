@@ -42,7 +42,7 @@ $( document ).ready(function() {
           //generate the form
           var form = $("<form class='ui form geospatialColumnForm'></form>")
           form.append($("<label for='GeospatialCol_name'> GeoSpatial Column Name: <label/>"));
-          var GeospatialCol_name = $("<input type='text' id='GeospatialCol_name' name='name' value='geom'></input>");
+          var GeospatialCol_name = $("<input type='text' id='GeospatialCol_name' name='name' value='geom'>");
           form.append(GeospatialCol_name);
 
 
@@ -50,8 +50,8 @@ $( document ).ready(function() {
           var lon_col = $("<select id='lon_col' name='lon_col'></select>");
 
           $.each(data['columns'],function(key,value){
-            lat_col.append($("<option></option>").attr("value",key).text(value));
-            lon_col.append($("<option></option>").attr("value",key).text(value));
+            lat_col.append($("<option></option>").attr("value",value).text(value));
+            lon_col.append($("<option></option>").attr("value",value).text(value));
           });
 
           form.append($("<label for='lat_col'> Select Latitude</label>"));
@@ -63,7 +63,7 @@ $( document ).ready(function() {
           var srid = $("<input type='text' id='srid' name='srid' value='4326'></input>");
           form.append(srid);
 
-          var GeoCol_type = $( "<input></input>",{'type':'hidden', 'id': 'GeoCol_type', 'name': 'type', 'default': 'latlon'});
+          var GeoCol_type = $( "<input></input>",{'type':'hidden', 'id': 'GeoCol_type', 'name': 'type', 'value': 'latlon'});
           form.append(GeoCol_type);
 
           $("#geospatialColumnsContainer").append(form);

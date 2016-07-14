@@ -4,6 +4,7 @@ import pandas as pd
 from sqlalchemy import create_engine, MetaData, Table, Column, Integer, \
                        String, Float, DateTime, ForeignKeyConstraint, ForeignKey,\
                        Enum, UniqueConstraint, Boolean
+from geoalchemy2 import Geometry
 
 import website.models as m
 
@@ -22,12 +23,11 @@ alchemy_types = {
 }
 
 
-def to_sql(df, datatypes, table_name, schema):
-    create_table(df, datatypes, table_name, schema)
+def to_sql(df, datatypes, table_name, schema, geospatial_columns=None):
+    create_table(df, datatypes, table_name, schema, geospatial_columns)
     session = m.get_session()
     table = getattr(m.Base.classes, table_name)
-    print table
-    insert_df(df, table, session)
+    insert_df(df, table, session, geospatial_columns)
     session.close()
     return table
 
@@ -59,7 +59,7 @@ def insert_df(df, table, session, geospatial_columns=None):
                 row[c] = None
         if geospatial_columns is not None:
             for c in geospatial_columns:
-                row[c['name']] = 'SRID=%s;POINT(%s %s)' % (c['srid'], row[c['lat_col']], row[c['lon_cal']])
+                row[c['name']] = 'SRID=%s;POINT(%s %s)' % (c['srid'], row[c['lat_col']], row[c['lon_col']])
     m.engine.execute(
         table.__table__.insert(),
         insert_dict
