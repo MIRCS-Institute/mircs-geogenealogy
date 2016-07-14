@@ -226,7 +226,6 @@ def manage_dataset(request, table):
 
 
 def add_dataset_key(request, table):
-    print request.POST
     if request.method == 'POST':
         # Get the POST parameter
         post_data = dict(request.POST)
