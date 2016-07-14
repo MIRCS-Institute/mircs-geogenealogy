@@ -3,6 +3,7 @@
 
 {% block externalLibraries %}
 <link rel="stylesheet" href="{% static 'css/upload_file.css' %}">
+<script src="{% static 'js/dataset_join.js' %}"></script>
 {% endblock %}
 
 {% block title %}Join Datasets{% endblock %}
@@ -22,7 +23,7 @@
 
           <div class="field">
             <label>Main Dataset</label>
-            <select class="dropdown" name="main_dataset">
+            <select class="dropdown dataset" name="main_dataset">
               <option value="">Choose a dateset...</option>
               {% for t in tables %}
                 {% if t.uuid == main %}
@@ -35,7 +36,7 @@
           </div>
           <div class="field">
             <label>Joining Dataset</label>
-            <select class="dropdown" name="joining_dataset">
+            <select class="dropdown dataset" name="joining_dataset">
               <option value="">Choose a dataset...</option>
               {% for t in tables %}
                 <option value="{{ t.uuid }}">{{ t.original_filename }} - {{ t.upload_date }}</option>
@@ -47,6 +48,9 @@
           <div class="field">
             <select class="dropdown" name="main_key">
               <option value="">Choose a key...</option>
+              {% for k in keys %}
+                <option value="{{ k.index_name }}">{{ k.dataset_columns }}</option>
+              {% endfor %}
             </select>
           </div>
           <div class="field">

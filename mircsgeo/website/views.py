@@ -309,17 +309,38 @@ def get_dataset_page(request, table, page_number):
 
 
 def join_datasets(request, table):
-    db = Session().connection()
-    session = m.get_session()
-    tables = session.query(
-        m.DATASETS.original_filename,
-        m.DATASETS.uuid,
-        m.DATASETS.upload_date
-    ).all()
-    session.close()
+    if request.method == "POST":
+        return None
+    else:
+        session = m.get_session()
+        tables = session.query(
+            m.DATASETS.original_filename,
+            m.DATASETS.uuid,
+            m.DATASETS.upload_date
+        ).all()
 
-    context = {'tables': tables, 'main':table}
-    return render(request, 'join_datasets.html', context)
+        keys = session.query(
+            m.DATASET_KEYS
+        ).filter(
+            m.DATASET_KEYS.dataset_uuid == table
+        )
+        session.close()
+
+        context = {'tables': tables, 'main':table, 'keys': keys}
+        return render(request, 'join_datasets.html', context)
+
+def get_dataset_keys(request, table):
+    session = m.get_session()
+    query = session.query(
+        m.DATASET_KEYS
+    ).filter(
+        m.DATASET_KEYS.dataset_uuid == table
+    )
+    session.close()
+    df = pd.read_sql(query.statement,query.session.bind)
+    keys = df.to_dict(orient='index')
+    return JsonResponse({'keys':str(keys)})
+
 
 def test_response(request):
     return HttpResponse('yay')
