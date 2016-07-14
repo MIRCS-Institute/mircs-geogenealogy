@@ -51,6 +51,14 @@ dataset_keys = Table('dataset_keys', m,
     ForeignKeyConstraint(['dataset_uuid'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid']),
 )
 
+geospatial_columns = Table('geospatial_columns', m,
+    Column('id', Integer, primary_key=True),
+    Column('dataset_uuid', String),
+    Column('column_definition', String),
+    ForeignKeyConstraint(['dataset_uuid'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid']),
+    schema=settings.DATABASES['default']['SCHEMA'],
+)
+
 dataset_joins = Table('dataset_joins', m,
     Column('id', Integer, primary_key=True),
     Column('dataset1_uuid', String),

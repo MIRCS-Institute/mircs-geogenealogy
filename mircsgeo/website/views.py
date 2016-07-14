@@ -123,6 +123,16 @@ def create_table(request):
         # Get teh primary key from the posted data
         datatypes = post_data['datatypes'][0].split(',')
 
+        # Parse the string returned from the form
+        geospatial_string = post_data['geospatial_columns'][0]
+        geospatial_columns = []
+        for column in geospatial_string.split(','):
+            c = {}
+            for field in column.split('&'):
+                field = field.split('=')
+                c[field[0]] = field[1]
+            geospatial_columns.append(c)
+
         # Figure out the path to the file that was originally uploaded
         absolute_path = os.path.join(
             os.path.dirname(__file__),
@@ -166,7 +176,7 @@ def create_table(request):
         session.commit()
 
         # Generate a database table based on the data found in the CSV file
-        table_generator.to_sql(df, datatypes, table_uuid, schema=schema)
+        table_generator.to_sql(df, datatypes, table_uuid, schema, geospatial_columns)
 
         session.close()
         return redirect('/')
@@ -217,13 +227,73 @@ def view_dataset(request, table):
         'dataset': rows,
         'columns': columns,
         'tablename': file_name,
-        'map': '/static/maps/map-'+table+'.html'
+        'map' : '/static/maps/map-' + table + '.html'
     })
 
 
 def manage_dataset(request, table):
-    return 'lols'
+    """
+    Return a page for managing table data
 
+    Parameters:
+    table (str) - the name of the table to be displayed. This should be a UUID
+    tablename (str) - original filename of uploaded table
+    """
+
+    # Get a session
+    session = m.get_session()
+    # Get the name of the file used to create the table being queried
+    file_name = str(session.query(
+        m.DATASETS.original_filename
+    ).filter(
+        m.DATASETS.uuid == table
+    ).one()[0])  # This returns a list containing a single element(original_filename)
+                 # The [0] gets the filename out of the list
+    session.close
+
+    return render(request, 'manage_dataset.html', {
+        'tablename': file_name,
+        'table': table
+    })
+
+def append_dataset(request, table):
+    """
+    Append dataset to existing table
+
+    Parameters:
+    table (str) - the name of the table to be displayed. This should be a UUID
+    """
+    if request.method == 'POST':
+        # Get the POST data
+        post_data = dict(request.POST)
+        # Get teh primary key from the posted data
+        datatypes = post_data['datatypes'][0].split(',')
+
+        # Figure out the path to the file that was originally uploaded
+        absolute_path = os.path.join(
+            os.path.dirname(__file__),
+            settings.MEDIA_ROOT,
+            request.session['temp_filename']  # Use the filepath stored in the session
+                                              # from when the user originally uploaded
+                                              # the file
+        )
+        # Use pandas to read the uploaded file as a CSV
+        df = pd.read_csv(absolute_path)
+        df = convert_time_columns(df)
+        # Replace spaces with underscores in the column names to be used in the db table
+        df.columns = [x.replace(" ", "_") for x in df.columns]
+        # Get a session
+        session = m.get_session()
+        table = getattr(m.Base.classes, table)
+        table_generator.insert_df(df, table, session)
+        session.close()
+        return redirect('/manage/'+table)
+    else:
+        form = Uploadfile()
+        return render(request, 'append_dataset.html', {
+            'form': form,
+            'table': table
+        })
 
 def add_dataset_key(request, table):
     if request.method == 'POST':
@@ -300,11 +370,15 @@ def get_dataset_page(request, table, page_number):
     columns = df.columns.tolist()
     rows = df.values.tolist()
     rows = convert_nans(rows)
+    median_lat = df.LATITUDE.median()
+    median_lon = df.LONGITUDE.median()
 
     return JsonResponse({
         'columns': columns,
         'rows': rows,
-        'pageCount': page_count
+        'pageCount': page_count,
+        'lat': median_lat,
+        'lon': median_lon
     })
 
 
@@ -359,8 +433,11 @@ def convert_nans(rows):
     # Convert np.NaN objects to 'null' so rows is JSON serializable
     for row in rows:
         for i, e in enumerate(row):
-            if pd.isnull(e):
-                row[i] = 'null'
+            try:
+                if pd.isnull(e):
+                    row[i] = 'null'
+            except TypeError as err:
+                row[i] = str(e)
     return rows
 
 

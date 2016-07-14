@@ -4,4 +4,5 @@
 */media/*
 db.sqlite3
 mircsgeo/website/media
+mircsgeo/website/migrations
 mircsgeo/website/static/maps

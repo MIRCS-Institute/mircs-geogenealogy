@@ -1,6 +1,4 @@
 function populateDataTable(tableElement, columns, rows, datatypes, possibleDatatypes) {
-  console.log(datatypes);
-  console.log(possibleDatatypes);
   tableElement.empty();
   // Iterate columns and create table headers for each
   var headerRow = $('<tr></tr>');
@@ -18,7 +16,7 @@ function populateDataTable(tableElement, columns, rows, datatypes, possibleDatat
       headerRow.append(header);
     }
     tableElement.append($('<thead></thead>').append(headerRow));
-    $('.ui.dropdown').dropdown();  
+    $('.ui.dropdown').dropdown();
   }
 
   var tableBody = $('<tbody></tbody>');
