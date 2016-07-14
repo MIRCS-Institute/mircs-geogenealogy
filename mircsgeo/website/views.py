@@ -352,23 +352,14 @@ def add_dataset_key(request, table):
 
 
 def get_dataset_page(request, table, page_number):
+    id_range, page_count = get_pagination_id_range(table, page_number)
+
     # Get a session
     session = m.get_session()
 
     # Get the object for the table we're working with
     table = getattr(m.Base.classes, table)
 
-    # Figure out how many rows are in the dataset and calculate the number of pages
-    dataset_count = session.query(
-        func.count(table.id)
-    ).one()[0]
-    page_count = int(math.ceil(dataset_count / settings.DATASET_ITEMS_PER_PAGE))
-
-    # Calculate the id range covered by the current page
-    id_range = (
-        int(page_number) * settings.DATASET_ITEMS_PER_PAGE,
-        (int(page_number) + 1) * settings.DATASET_ITEMS_PER_PAGE
-    )
 
     query = session.query(
         table
@@ -431,6 +422,8 @@ def get_dataset_keys(request, table):
 
 
 def get_dataset_geojson(request, table, page_number):
+    id_range, page_count = get_pagination_id_range(table, page_number)
+
     # Get a session
     session = m.get_session()
 
@@ -448,9 +441,12 @@ def get_dataset_geojson(request, table, page_number):
     # build up geospatial select functions
     # Note: we're just grabbing the first geospatial column right now
     #       a picker for geo columns might be desirable someday
-    geojson = session.query(t, geo_column_objects[0].label('geometry'))
+    geojson = session.query(t, geo_column_objects[0].label('geometry')).filter(
+        t.id > id_range[0],
+        t.id <= id_range[1]
+    )
     # Get a DataFrame with the results of the query
-    data = pd.read_sql(geojson.statement, geojson.session.bind)[0:400]
+    data = pd.read_sql(geojson.statement, geojson.session.bind)
     geo_column_names.append('geometry')
 
     # Build some properly formatted geojson to pass into leaflet
@@ -493,6 +489,28 @@ def convert_nans(rows):
                 row[i] = str(e)
     return rows
 
+
+def get_pagination_id_range(table, page_number):
+    # Get a session
+    session = m.get_session()
+
+    # Get the object for the table we're working with
+    table = getattr(m.Base.classes, table)
+
+    # Figure out how many rows are in the dataset and calculate the number of pages
+    dataset_count = session.query(
+        func.count(table.id)
+    ).one()[0]
+    page_count = int(math.ceil(dataset_count / settings.DATASET_ITEMS_PER_PAGE))
+
+    # Calculate the id range covered by the current page
+    id_range = (
+        int(page_number) * settings.DATASET_ITEMS_PER_PAGE,
+        (int(page_number) + 1) * settings.DATASET_ITEMS_PER_PAGE
+    )
+    session.close()
+
+    return id_range, page_count
 
 def Session():
     from aldjemy.core import get_engine
