@@ -221,8 +221,47 @@ def view_dataset(request, table):
 
 
 def manage_dataset(request, table):
-    return 'lols'
+    """
+    Return a page for managing table data
 
+    Parameters:
+    table (str) - the name of the table to be displayed. This should be a UUID
+    """
+    return render(request, 'manage_dataset.html', {
+        'tablename': table
+    })
+
+def append_dataset(request, table):
+    """
+    Append dataset to existing table
+
+    Parameters:
+    table (str) - the name of the table to be displayed. This should be a UUID
+    """
+    if request.method == 'POST':
+        # Get the POST data
+        post_data = dict(request.POST)
+        # Get teh primary key from the posted data
+        datatypes = post_data['datatypes'][0].split(',')
+
+        # Figure out the path to the file that was originally uploaded
+        absolute_path = os.path.join(
+            os.path.dirname(__file__),
+            settings.MEDIA_ROOT,
+            request.session['temp_filename']  # Use the filepath stored in the session
+                                              # from when the user originally uploaded
+                                              # the file
+        )
+        # Use pandas to read the uploaded file as a CSV
+        df = pd.read_csv(absolute_path)
+        df = convert_time_columns(df)
+        # Replace spaces with underscores in the column names to be used in the db table
+        df.columns = [x.replace(" ", "_") for x in df.columns]
+        # Get a session
+        session = m.get_session()
+        insert_df(df, table, session)
+        session.close()
+        return redirect('/')
 
 def get_dataset_page(request, table, page_number):
     # Get a session
