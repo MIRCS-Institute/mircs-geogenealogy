@@ -10,5 +10,7 @@ urlpatterns = [
     url(r'^store_file$', views.store_file, name='store_file'),
     url(r'^test_response$', views.test_response, name='test_response'),
     url(r'^create_table$', views.create_table, name='create_table'),
-    url(r'^view/(?P<table>[^/]+)/$', views.view_dataset, name='view_dataset')
+    url(r'^view/(?P<table>[^/]+)/$', views.view_dataset, name='view_dataset'),
+    # url(r'^manage/(?P<table>[^/]+)$', views.manage_dataset, name='manage_dataset'),
+    url(r'^get_dataset_page/(?P<table>[^/]+)/(?P<page_number>[0-9]+)/$', views.get_dataset_page, name='get_dataset_page')
 ]

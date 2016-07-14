@@ -3,6 +3,9 @@ from django.template import RequestContext
 from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 from django.conf import settings
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import func
+
+import math
 
 import website.models as m
 from .forms import Uploadfile
@@ -29,7 +32,7 @@ def home(request):
     session = m.get_session()
     tables = session.query(
         m.DATASETS.original_filename,
-        m.DATASETS.table_name,
+        m.DATASETS.uuid,
         m.DATASETS.upload_date
     ).all()
     session.close()
@@ -144,22 +147,35 @@ def create_table(request):
         df.columns = [x.replace(" ", "_") for x in df.columns]
 
         # Generate a UUID to use as the table name, use replace to remove dashes
-        table_name = str(uuid.uuid4()).replace("-", "")
+        table_uuid = str(uuid.uuid4()).replace("-", "")
 
         # Get an sqlalchemy session automap'ed to the database
         session = m.get_session()
         # Create a new dataset to be added
         dataset = m.DATASETS(
+            uuid=table_uuid,
             original_filename=request.session['real_filename'],
-            table_name=table_name,
             upload_date=datetime.datetime.now(),
         )
-        # Add the dataset to the session and commit the session to the database
+        # create a new transaction to be added
+        ids = [int(i) for i in (df.index + 1).tolist()]
+
+        transaction = m.DATASET_TRANSACTIONS(
+            dataset_uuid=table_uuid,
+            transaction_type=m.transaction_types[0],
+            rows_affected=len(ids),
+            affected_row_ids=ids,
+        )
+
+
+        # Add the dataset and transaction to the session and commit the session
+        # to the database
         session.add(dataset)
+        session.add(transaction)
         session.commit()
 
         # Generate a database table based on the data found in the CSV file
-        table_generator.to_sql(df, datatypes, table_name, schema, geospatial_columns)
+        table_generator.to_sql(df, datatypes, table_uuid, schema, geospatial_columns)
 
         session.close()
         return redirect('/')
@@ -180,7 +196,7 @@ def view_dataset(request, table):
     file_name = str(session.query(
         m.DATASETS.original_filename
     ).filter(
-        m.DATASETS.table_name == table
+        m.DATASETS.uuid == table
     ).one()[0])  # This returns a list containing a single element(original_filename)
                  # The [0] gets the filename out of the list
     session.close
@@ -199,9 +215,10 @@ def view_dataset(request, table):
     map = folium.Map(location=NORTHEND_COORDINATES, zoom_start=10)
 
     # add a marker for every record in the filtered data, use a clustered view
-    for each in df[0:100].iterrows():
-        map.simple_marker(
-            location=[each[1]['LATITUDE'], each[1]['LONGITUDE']])
+    if 'LATITUDE' in df and 'LONGITUDE' in df:
+        for each in df[0:100].iterrows():
+            map.simple_marker(
+                location = [each[1]['LATITUDE'],each[1]['LONGITUDE']])
 
 
     map.save(os.path.dirname(os.path.abspath(__file__)) + '/static/maps/map-'+table+'.html')
@@ -210,6 +227,50 @@ def view_dataset(request, table):
         'columns': columns,
         'tablename': file_name,
         'map' : '/static/maps/map-' + table + '.html'
+    })
+
+
+def manage_dataset(request, table):
+    return 'lols'
+
+
+def get_dataset_page(request, table, page_number):
+    # Get a session
+    session = m.get_session()
+
+    # Get the object for the table we're working with
+    table = getattr(m.Base.classes, table)
+
+    # Figure out how many rows are in the dataset and calculate the number of pages
+    dataset_count = session.query(
+        func.count(table.id)
+    ).one()[0]
+    page_count = int(math.ceil(dataset_count / settings.DATASET_ITEMS_PER_PAGE))
+
+    # Calculate the id range covered by the current page
+    id_range = (
+        int(page_number) * settings.DATASET_ITEMS_PER_PAGE,
+        (int(page_number) + 1) * settings.DATASET_ITEMS_PER_PAGE
+    )
+
+    query = session.query(
+        table
+    ).filter(
+        table.id > id_range[0],
+        table.id <= id_range[1]
+    )
+
+    # Get a DataFrame with the results of the query
+    df = pd.read_sql(query.statement, query.session.bind)
+
+    columns = df.columns.tolist()
+    rows = df.values.tolist()
+    rows = convert_nans(rows)
+
+    return JsonResponse({
+        'columns': columns,
+        'rows': rows,
+        'pageCount': page_count
     })
 
 
@@ -225,6 +286,7 @@ def convert_time_columns(df, datetime_identifiers=['time', 'date']):
                 df[c] = pd.to_datetime(df[c])
     return df
 
+
 def convert_nans(rows):
     # Convert np.NaN objects to 'null' so rows is JSON serializable
     for row in rows:
@@ -232,6 +294,7 @@ def convert_nans(rows):
             if pd.isnull(e):
                 row[i] = 'null'
     return rows
+
 
 def Session():
     from aldjemy.core import get_engine

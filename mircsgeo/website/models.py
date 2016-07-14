@@ -8,6 +8,8 @@ from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, 
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.dialects.postgresql import ARRAY
 
+import uuid
+
 import atexit
 
 # Create your models here.
@@ -18,46 +20,70 @@ engine = create_engine(settings.SQLALCHEMY_CONNECT_STRING, echo=False)
 m = MetaData(schema=settings.DATABASES['default']['SCHEMA'])
 
 datasets = Table('datasets', m,
-    Column('id', Integer, primary_key=True),
+    Column('uuid', String, primary_key=True),
     Column('original_filename', String),
-    Column('table_name', String),
     Column('upload_date', DateTime),
-    schema=settings.DATABASES['default']['SCHEMA'],
 )
 
 metadata = Table('metadata', m,
     Column('id', Integer, primary_key=True),
-    Column('dataset_id', Integer),
+    Column('dataset_uuid', String),
     Column('key', String),
     Column('value', String),
-    ForeignKeyConstraint(['dataset_id'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.id']),
-    schema=settings.DATABASES['default']['SCHEMA'],
+    ForeignKeyConstraint(['dataset_uuid'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid']),
 )
 
-transaction_types = ('add', 'modify', 'add_and_modify', 'remove')
+transaction_types = ('create', 'add', 'modify', 'add_and_modify', 'remove')
 dataset_transactions = Table('dataset_transactions', m,
     Column('id', Integer, primary_key=True),
-    Column('dataset_id', Integer),
+    Column('dataset_uuid', String),
     Column('transaction_type', Enum(*transaction_types, name='transaction_type'), default=transaction_types[0]),
     Column('rows_affected', Integer),
     Column('affected_row_ids', ARRAY(Integer)),
-    ForeignKeyConstraint(['dataset_id'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.id']),
-    schema=settings.DATABASES['default']['SCHEMA'],
+    ForeignKeyConstraint(['dataset_uuid'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid']),
+)
+
+dataset_keys = Table('dataset_keys', m,
+    Column('dataset_uuid', String, primary_key=True),
+    Column('constraint_name', String, primary_key=True),
+    Column('constraint_author', String),
+    ForeignKeyConstraint(['dataset_uuid'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid']),
 )
 
 geospatial_columns = Table('geospatial_columns', m,
     Column('id', Integer, primary_key=True),
-    Column('dataset_id', Integer),
+    Column('dataset_uuid', String),
     Column('column_definition', String),
-    ForeignKeyConstraint(['dataset_id'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.id']),
+    ForeignKeyConstraint(['dataset_uuid'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid']),
     schema=settings.DATABASES['default']['SCHEMA'],
 )
+
+dataset_joins = Table('dataset_joins', m,
+    Column('dataset1_uuid', String),
+    Column('dataset2_uuid', String),
+    ForeignKeyConstraint(
+        ['dataset1_uuid'],
+        [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid'],
+        name='fk_dataset_joins1_datasets_uuid'
+    ),
+    ForeignKeyConstraint(
+        ['dataset2_uuid'],
+        [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid'],
+        name='fk_dataset_joins2_datasets_uuid'
+    ),
+)
+
+# SAVAGE
+# Close your eyes
+def name_for_collection_relationship(base, local_cls, refered_cls, constraint):
+    uid = str(uuid.uuid4()).replace('_', '')
+    return refered_cls.__name__.lower() + "_" + uid + "_collection"
 
 # BOILERPLATE
 m.create_all(engine)
 m.reflect(engine)
 Base = automap_base(metadata=m)
-Base.prepare()
+Base.prepare(name_for_collection_relationship=name_for_collection_relationship)
 Session = sessionmaker(bind=engine)
 
 # Expose the tables that were just created
@@ -73,7 +99,7 @@ def refresh():
     global engine
     m.reflect(engine)
     Base = automap_base(metadata=m)
-    Base.prepare()
+    Base.prepare(name_for_collection_relationship=name_for_collection_relationship)
     Session = sessionmaker(bind=engine)
 
 
