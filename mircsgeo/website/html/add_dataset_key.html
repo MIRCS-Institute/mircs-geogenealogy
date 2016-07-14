@@ -9,9 +9,12 @@
 
 {% block content %}
 <div class="ui container">
-  <form method='post'>
+  <h1>Add Dataset Key</h1>
+  <form method='post' class="ui form">
     {% csrf_token %}
-    {{ form }}
+    <div class="field">
+      {{ form }}
+    </div>
     <input id='submit_dataset_columns' class="ui button green" type="submit" value="Submit"/>
   </form>
 </div>

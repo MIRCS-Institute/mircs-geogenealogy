@@ -14,6 +14,5 @@ class AddDatasetKey(forms.Form):
     dataset_columns = forms.MultipleChoiceField(
         label='Dataset Columns:',
         choices=[],
-        widget=forms.SelectMultiple()
-        # attrs={'class': 'ui fluid dropdown'}
+        widget=forms.SelectMultiple(attrs={'class': 'ui fluid dropdown'})
     )
