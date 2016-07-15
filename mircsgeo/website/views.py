@@ -4,7 +4,7 @@ from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 from django.conf import settings
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.schema import Index
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 import math
 
@@ -249,11 +249,28 @@ def manage_dataset(request, table):
         m.DATASETS.uuid == table
     ).one()[0])  # This returns a list containing a single element(original_filename)
                  # The [0] gets the filename out of the list
+
+    keys = session.query(
+        m.DATASET_KEYS
+    ).filter(
+        m.DATASET_KEYS.dataset_uuid == table
+    ).all()
     session.close
+
+    joins = session.query(
+        m.DATASET_JOINS
+    ).filter(
+        or_(
+            m.DATASET_JOINS.dataset1_uuid == table,
+            m.DATASET_JOINS.dataset2_uuid == table
+        )
+    ).all()
 
     return render(request, 'manage_dataset.html', {
         'tablename': file_name,
-        'table': table
+        'table': table,
+        'keys': keys,
+        'joins': joins
     })
 
 def append_dataset(request, table):
@@ -383,10 +400,11 @@ def get_dataset_page(request, table, page_number):
         'lon': median_lon
     })
 
-'''
-Join Datsets
-'''
+
 def join_datasets(request, table):
+    """
+    Join Datsets
+    """
     # If the method is post write the join to the datbase
     if request.method == "POST":
         # Get the POST data
@@ -427,10 +445,11 @@ def join_datasets(request, table):
         context = {'tables': tables, 'main':table, 'keys': keys}
         return render(request, 'join_datasets.html', context)
 
-'''
-Get Table Keys
-'''
+
 def get_dataset_keys(request, table):
+    """
+    Get Table Keys
+    """
     session = m.get_session()
     query = session.query(
         m.DATASET_KEYS
