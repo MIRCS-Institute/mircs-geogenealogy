@@ -4,7 +4,7 @@ from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 from django.conf import settings
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.schema import Index
-from sqlalchemy import func
+from sqlalchemy import func, or_
 import geoalchemy2.functions as geofunc
 
 import json
@@ -262,11 +262,28 @@ def manage_dataset(request, table):
         m.DATASETS.uuid == table
     ).one()[0])  # This returns a list containing a single element(original_filename)
                  # The [0] gets the filename out of the list
+
+    keys = session.query(
+        m.DATASET_KEYS
+    ).filter(
+        m.DATASET_KEYS.dataset_uuid == table
+    ).all()
     session.close
+
+    joins = session.query(
+        m.DATASET_JOINS
+    ).filter(
+        or_(
+            m.DATASET_JOINS.dataset1_uuid == table,
+            m.DATASET_JOINS.dataset2_uuid == table
+        )
+    ).all()
 
     return render(request, 'manage_dataset.html', {
         'tablename': file_name,
-        'table': table
+        'table': table,
+        'keys': keys,
+        'joins': joins
     })
 
 def append_dataset(request, table):
@@ -295,12 +312,14 @@ def append_dataset(request, table):
         df = convert_time_columns(df)
         # Replace spaces with underscores in the column names to be used in the db table
         df.columns = [x.replace(" ", "_") for x in df.columns]
+
         # Get a session
         session = m.get_session()
+        tablename = table
         table = getattr(m.Base.classes, table)
         table_generator.insert_df(df, table, session)
         session.close()
-        return redirect('/manage/'+table)
+        return redirect('/manage/'+tablename)
     else:
         form = Uploadfile()
         return render(request, 'append_dataset.html', {
@@ -387,9 +406,30 @@ def get_dataset_page(request, table, page_number):
 
 
 def join_datasets(request, table):
+    """
+    Join Datsets
+    """
+    # If the method is post write the join to the datbase
     if request.method == "POST":
-        return None
+        # Get the POST data
+        post_data = dict(request.POST)
+
+        # Get the sqlalchemy sesssion and create the dataset_join object
+        session = m.get_session()
+        dataset_join = m.DATASET_JOINS(
+            dataset1_uuid=post_data['main_dataset'][0],
+            index1_name=post_data['main_key'][0],
+            dataset2_uuid=post_data['joining_dataset'][0],
+            index2_name=post_data['joining_key'][0]
+        )
+        # Commit the object to the database
+        session.add(dataset_join)
+        session.commit()
+        session.close()
+        # Return to the tables dataset manage page
+        return redirect('/manage/'+table)
     else:
+        # If the Request is GET, get the datasets
         session = m.get_session()
         tables = session.query(
             m.DATASETS.original_filename,
@@ -397,6 +437,7 @@ def join_datasets(request, table):
             m.DATASETS.upload_date
         ).all()
 
+        # Get the table datasets keys
         keys = session.query(
             m.DATASET_KEYS
         ).filter(
@@ -404,11 +445,15 @@ def join_datasets(request, table):
         )
         session.close()
 
+        # Return to the manage/join page
         context = {'tables': tables, 'main':table, 'keys': keys}
         return render(request, 'join_datasets.html', context)
 
 
 def get_dataset_keys(request, table):
+    """
+    Get Table Keys
+    """
     session = m.get_session()
     query = session.query(
         m.DATASET_KEYS
@@ -417,8 +462,10 @@ def get_dataset_keys(request, table):
     )
     session.close()
     df = pd.read_sql(query.statement,query.session.bind)
-    keys = df.to_dict(orient='index')
-    return JsonResponse({'keys':str(keys)})
+    keys = []
+    for index, row in df.iterrows():
+        keys.append([row['index_name'], row['dataset_columns']])
+    return JsonResponse({'keys':keys})
 
 
 def get_dataset_geojson(request, table, page_number):
