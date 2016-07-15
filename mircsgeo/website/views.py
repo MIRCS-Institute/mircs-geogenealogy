@@ -315,11 +315,25 @@ def append_dataset(request, table):
 
         # Get a session
         session = m.get_session()
-        tablename = table
+        table_uuid = table
         table = getattr(m.Base.classes, table)
-        table_generator.insert_df(df, table, session)
+        query = session.query(func.max(table.id).label("last_id"))
+        idMax = query.one()
+        result = table_generator.insert_df(df, table, session)
+        newIdMax = query.one()
+
+        # Create entry in transaction table for append
+        transaction = m.DATASET_TRANSACTIONS(
+            dataset_uuid=table_uuid,
+            transaction_type=m.transaction_types[1],
+            rows_affected=len(df.index),
+            affected_row_ids=range(idMax[0]+1, newIdMax[0]+1),
+        )
+        session.add(transaction)
+        session.commit()
+
         session.close()
-        return redirect('/manage/'+tablename)
+        return redirect('/manage/'+table_uuid)
     else:
         form = Uploadfile()
         return render(request, 'append_dataset.html', {
