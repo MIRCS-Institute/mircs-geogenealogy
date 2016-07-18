@@ -20,7 +20,6 @@ import os
 import uuid
 
 import datetime
-import folium
 
 import website.table_generator as table_generator
 
@@ -222,25 +221,10 @@ def view_dataset(request, table):
     columns = df.columns.tolist()
     rows = convert_nans(df.values.tolist())
 
-    #Save north end coordinates
-    NORTHEND_COORDINATES = (44.6701, -63.6108)
-
-    # create empty map zoomed in on North end Halifax
-    map = folium.Map(location=NORTHEND_COORDINATES, zoom_start=10)
-
-    # add a marker for every record in the filtered data, use a clustered view
-    if 'LATITUDE' in df and 'LONGITUDE' in df:
-        for each in df[0:100].iterrows():
-            map.simple_marker(
-                location = [each[1]['LATITUDE'],each[1]['LONGITUDE']])
-
-
-    map.save(os.path.dirname(os.path.abspath(__file__)) + '/static/maps/map-'+table+'.html')
     return render(request, 'view_dataset.html', {
         'dataset': rows,
         'columns': columns,
         'tablename': file_name,
-        'map' : '/static/maps/map-' + table + '.html'
     })
 
 
@@ -377,7 +361,7 @@ def add_dataset_key(request, table):
         session.close()
 
         # This will eventually redirect to the manage_dataset page
-        return redirect('/')
+        return redirect('/manage/'+table)
     else:
         columns = [str(x).split('.')[1] for x in getattr(m.Base.classes, table).__table__.columns]
         form = AddDatasetKey(zip(columns, columns))

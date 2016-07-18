@@ -3,21 +3,28 @@
 
 {% block title %}Manage Dataset{% endblock %}
 {% block content %}
+
 <div class="ui container">
+  <a href="/" class="ui button">Home</a>
   <div class="ui segments">
     <div class="ui segment">
       <h1 class="ui header">{{ tablename }}</h1>
     </div>
     <div class="ui segment grid">
-        <div class="ui link list eight wide column">
-            <a href="/manage/append/{{table}}" class="item">Append Data</a>
-            <a href="/add_dataset_key/{{table}}" class="item">Add Data Key For Join</a>
-<!--            <a href="/manage/join/{{tablename.uuid}}" class="item">Join Data</a>-->
+        <div class="five wide column">
+          <a href="/manage/append/{{table}}" class="ui button green fluid">Append Data</a>
+        </div>
+        <div class="six wide column">
+          <a href="/add_dataset_key/{{table}}" class="ui button orange fluid">Add Data Key For Join</a>
+        </div>
+        <div class="five wide column">
+          <a href="/manage/join/{{table}}" class="ui button yellow fluid">Join Data</a>
         </div>
         <div class="eight wide column">
           <div class="ui medium header">Keys</div>
           <div class="ui list">
             {% for key in keys %}
+            <hr/>
               <div class="item">
                 <div class="header">{{ key.index_name }}</div>
                 <div class="ui list">
@@ -28,9 +35,12 @@
               </div>
             {% endfor %}
           </div>
+        </div>
+        <div class="eight wide column">
           <div class="ui medium header">Joins</div>
           <div class="ui list">
             {% for join in joins %}
+            <hr/>
               <div class="item">
                 <div class="header">{{ join.dataset1_uuid }}</div>
                 {{ join.index1_name }}

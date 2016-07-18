@@ -31,15 +31,16 @@
         <div id='primaryKeyPicker' style="display:none;">
           <form id='fileUploadForm' enctype='multipart/form-data' class="ui form" method="POST" action="/manage/append/{{ table }}">
             {% csrf_token %}
-            <div class="field">
-              <input class="ui button green" type="submit" value="Submit"/>
-            </div>
-          </form>
 
           <h3 class="ui header">Dataset</h3>
 
           <table id='uploadedDataTable' class="ui celled striped table stackable">
           </table>
+
+          <div class="field">
+            <input class="ui button green" type="submit" value="Submit"/>
+          </div>
+          </form>
         </div>
         <div id='uploadConfirmation'></div>
       </div>
