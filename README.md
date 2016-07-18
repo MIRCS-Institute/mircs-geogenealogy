@@ -22,4 +22,14 @@ The Python libraries used in the program  are:
 7. psycopg2 
 8. xlrd
 
-#Starting the server
+#Starting the Server
+1. Navigate to mircsgeo/manage.py
+2. Run the command `python manage.py runserver 0.0.0.0:8000`
+
+#Current Functionality
+1. Upload a file (CSV or Excel)
+2. Add geospatial columns
+3. Append data to a dataset
+4. Pick a key
+5. Create a Join
+6. View the datatset
