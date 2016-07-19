@@ -36,6 +36,7 @@ The Python libraries used in the program  are:
 6. Select the Longitude and Latitude columns
 7. Scroll to the bottom of the page
 8. Click "Submit"
+
 ##2. Add geospatial columns
 ##3. Append data to a dataset
 ##4. Pick a key
