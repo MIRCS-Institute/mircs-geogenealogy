@@ -28,13 +28,15 @@ function populateDataTable(tableElement, columns, rows, datatypes, possibleDatat
   tableElement.append(tableBody);
 }
 
+//Append suggested datatypes to table for users to confirm or make changes
 function createDatatypePicker(currentDatatype, possibleDatatypes) {
+  //Append suggested datatype to div
   var pickerDiv = $('<div class="ui selection dropdown"></div>')
                     .append('<input type="hidden" value="' + currentDatatype + '">')
                     .append('<div class="text">' + currentDatatype + '</div>');
 
   var menu = $('<div class="menu"></div>');
-
+  //Append list of suggested types
   for(var i=0; i<possibleDatatypes.length; i++) {
     menu.append('<div class="item" data-value="' + possibleDatatypes[i]
                       +'">' + possibleDatatypes[i] + '</div>');
@@ -42,6 +44,7 @@ function createDatatypePicker(currentDatatype, possibleDatatypes) {
   return pickerDiv.append(menu);
 }
 
+//Append data to table for display
 function createTableRow(dataRow) {
   var tableRow = $('<tr></tr>');
   for(var i=0; i<dataRow.length; i++) {
