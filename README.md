@@ -28,6 +28,14 @@ The Python libraries used in the program  are:
 
 #Current Functionality
 ##1. Upload a file (CSV or Excel)
+1. Click "Upload File"
+2. On the new page, click "Choose..."
+3. Select the Excel or CSV to upload
+4. Wait for the page to load a preview of the data
+5. Click "Add GeoSpatial Columns"
+6. Select the Longitude and Latitude columns
+7. Scroll to the bottom of the page
+8. Click "Submit"
 ##2. Add geospatial columns
 ##3. Append data to a dataset
 ##4. Pick a key
