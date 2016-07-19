@@ -37,8 +37,14 @@ The Python libraries used in the program  are:
 7. Scroll to the bottom of the page
 8. Click "Submit"
 
-##2. Add geospatial columns
-##3. Append data to a dataset
-##4. Pick a key
-##5. Create a Join
-##6. View the datatset
+##2. Append data to a dataset
+
+
+##3. Pick a key
+
+
+##4. Create a Join
+
+
+##5. View the datatset
+1. On the home page Click "View" for the dataset to view a map and the table of data
