@@ -60,6 +60,10 @@ The Python libraries used in the program  are:
 5. Select the joining dataset key
 6. Click "Submit"
 
-
 ##5. View the datatset
 1. On the home page Click "View" for the dataset to view a map and the table of data
+
+
+#Database
+##ERD
+![Alt text] (https://github.com/alexetnunes/mircs-geogenealogy/blob/master/db-erd.png)
