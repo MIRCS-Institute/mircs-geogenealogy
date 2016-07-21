@@ -1,3 +1,4 @@
+<!-- UI to view the datasets -->
 {% extends "base.html" %}
 {% load staticfiles %}
 {% block externalLibraries %}
@@ -7,6 +8,7 @@
 <script src="https://npmcdn.com/leaflet@0.7.7/dist/leaflet.js"></script>
 {% endblock %}
 
+<!-- Creating the UI to display the datasets-->
 {% block title %}MIRCS Geo-Genealogy{% endblock %}
 {% block content %}
 <div class="ui container">
@@ -16,7 +18,6 @@
       <h1 class="ui header">{{ tablename }}</h1>
     </div>
     <div class="ui segment">
-      <!-- <iframe src="{{ map }}" width="100%" height="500px"></iframe> -->
       <div id="dataMap" style="height:500px;"></div>
     </div>
     <div class="ui segment" style='overflow-x:scroll'>
