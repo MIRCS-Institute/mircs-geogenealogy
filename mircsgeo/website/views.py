@@ -31,16 +31,21 @@ def home(request):
     Render a view listing all datasets found in the datasets table in the DB
     """
 
-    db = Session().connection()
+    # Connect to the session
+    db = Session().connection()  # TODO Is this required?
     session = m.get_session()
+
+    # Create a table map to pass to the html file
     tables = session.query(
         m.DATASETS.original_filename,
         m.DATASETS.uuid,
         m.DATASETS.upload_date
     ).all()
+    # Close the session
     session.close()
-
+    # Create a context of the table map to pass to the html file
     context = {'tables': tables}
+    # Renders the home page
     return render(request, 'home.html', context)
 
 
@@ -49,10 +54,13 @@ def upload_file(request):
     Render a file upload form
     """
 
+    # TODO figure out what this does and comment it
     if request.method == 'POST':
         return HttpResponseRedirect('test_response')
     else:
+        # File upload form
         form = Uploadfile()
+    # Render the upload file page
     return render(request, 'upload_file.html', {'form': form})
 
 
@@ -90,6 +98,7 @@ def store_file(request):
             # Store the file as a csv
             df.to_csv(absolute_path, index=False)
 
+            # Convert dates and times to proper datetime format
             df = convert_time_columns(df)
 
             # Return the columns and the first 10 rows of the file as a JSON object
@@ -134,20 +143,25 @@ def create_table(request):
         # Parse the string returned from the form
         geospatial_string = post_data['geospatial_columns'][0]
         geospatial_columns = []
+        # For each geospatial column, create a dictionary using fields as keys to store values
         for column in geospatial_string.split(','):
+            # Create the dictionary
             c = {}
+            #
             for field in column.split('&'):
                 field = field.split('=')
+                # "exampleone=7&exampletwo=8" -> {"exampleone":7, "exampletwo":8}
                 c[field[0]] = field[1]
 
+            # Append the dictionary to geospatial_columns (for the to_sql function)
             geospatial_columns.append(c)
 
+            # Add geospatial columns to the session
             geo_col = m.GEOSPATIAL_COLUMNS(
                 dataset_uuid=table_uuid,
                 column=c['name']
             )
             session.add(geo_col)
-
 
         # Figure out the path to the file that was originally uploaded
         absolute_path = os.path.join(
@@ -163,7 +177,6 @@ def create_table(request):
         # Replace spaces with underscores in the column names to be used in the db table
         df.columns = [x.replace(" ", "_") for x in df.columns]
 
-
         # Create a new dataset to be added
         dataset = m.DATASETS(
             uuid=table_uuid,
@@ -173,13 +186,13 @@ def create_table(request):
         # create a new transaction to be added
         ids = [int(i) for i in (df.index + 1).tolist()]
 
+        # Create a transaction to add to transaction table
         transaction = m.DATASET_TRANSACTIONS(
             dataset_uuid=table_uuid,
             transaction_type=m.transaction_types[0],
             rows_affected=len(ids),
             affected_row_ids=ids,
         )
-
 
         # Add the dataset and transaction to the session and commit the session
         # to the database
@@ -221,6 +234,7 @@ def view_dataset(request, table):
     columns = df.columns.tolist()
     rows = convert_nans(df.values.tolist())
 
+    # Render the view dataset page
     return render(request, 'view_dataset.html', {
         'dataset': rows,
         'columns': columns,
@@ -246,14 +260,14 @@ def manage_dataset(request, table):
         m.DATASETS.uuid == table
     ).one()[0])  # This returns a list containing a single element(original_filename)
                  # The [0] gets the filename out of the list
-
+    # Get the keys from the table being queried
     keys = session.query(
         m.DATASET_KEYS
     ).filter(
         m.DATASET_KEYS.dataset_uuid == table
     ).all()
     session.close
-
+    # Get the relations for the table being queried TODO is this correct?
     joins = session.query(
         m.DATASET_JOINS
     ).filter(
@@ -263,12 +277,14 @@ def manage_dataset(request, table):
         )
     ).all()
 
+    # Render the data management page
     return render(request, 'manage_dataset.html', {
         'tablename': file_name,
         'table': table,
         'keys': keys,
         'joins': joins
     })
+
 
 def append_dataset(request, table):
     """
@@ -277,6 +293,7 @@ def append_dataset(request, table):
     Parameters:
     table (str) - the name of the table to be displayed. This should be a UUID
     """
+    # TODO Comment the if and the else
     if request.method == 'POST':
         # Get the POST data
         post_data = dict(request.POST)
@@ -299,11 +316,12 @@ def append_dataset(request, table):
 
         # Get a session
         session = m.get_session()
+        # TODO Comment this properly
         table_uuid = table
         table = getattr(m.Base.classes, table)
         query = session.query(func.max(table.id).label("last_id"))
         idMax = query.one()
-        result = table_generator.insert_df(df, table, session)
+        result = table_generator.insert_df(df, table, session)  # TODO result is not used. Should it be?
         newIdMax = query.one()
 
         # Create entry in transaction table for append
@@ -316,16 +334,25 @@ def append_dataset(request, table):
         session.add(transaction)
         session.commit()
 
+        # Close the session
         session.close()
+        # TODO comment this
         return redirect('/manage/'+table_uuid)
     else:
+        # Upload file form (Used for appending)
         form = Uploadfile()
+        # Render the append dataset page
         return render(request, 'append_dataset.html', {
             'form': form,
             'table': table
         })
 
+
 def add_dataset_key(request, table):
+    """
+    Add a key to a dataset
+    """
+    # TODO Comment if else
     if request.method == 'POST':
         # Get the POST parameter
         post_data = dict(request.POST)
@@ -360,15 +387,20 @@ def add_dataset_key(request, table):
         session.commit()
         session.close()
 
-        # This will eventually redirect to the manage_dataset page
+        # Redirect to the manage_dataset page
         return redirect('/manage/'+table)
     else:
+        # TODO Don't understand
         columns = [str(x).split('.')[1] for x in getattr(m.Base.classes, table).__table__.columns]
         form = AddDatasetKey(zip(columns, columns))
         return render(request, 'add_dataset_key.html', {'form': form})
 
 
 def get_dataset_page(request, table, page_number):
+    """"
+    Determine which rows to display on a page
+    """
+    # Determines the id range and number of pages needed to display the table
     id_range, page_count = get_pagination_id_range(table, page_number)
 
     # Get a session
@@ -377,7 +409,7 @@ def get_dataset_page(request, table, page_number):
     # Get the object for the table we're working with
     table = getattr(m.Base.classes, table)
 
-
+    # Query the table for rows within the correct range
     query = session.query(
         table
     ).filter(
@@ -388,6 +420,7 @@ def get_dataset_page(request, table, page_number):
     # Get a DataFrame with the results of the query
     df = pd.read_sql(query.statement, query.session.bind)
 
+    # Convert everything to the correct formats for displaying
     columns = df.columns.tolist()
     rows = df.values.tolist()
     rows = convert_nans(rows)
@@ -452,21 +485,33 @@ def get_dataset_keys(request, table):
     """
     Get Table Keys
     """
+    # TODO is this function finished? Request is not used (´；ω；`)
+    # TODO I don't get this function
+
+    # Get the session
     session = m.get_session()
+    # Get the keys from the requested table ???
     query = session.query(
         m.DATASET_KEYS
     ).filter(
         m.DATASET_KEYS.dataset_uuid == table
     )
+    # Close the session
     session.close()
-    df = pd.read_sql(query.statement,query.session.bind)
+    # Read the ???
+    df = pd.read_sql(query.statement, query.session.bind)
     keys = []
     for index, row in df.iterrows():
         keys.append([row['index_name'], row['dataset_columns']])
-    return JsonResponse({'keys':keys})
+    return JsonResponse({'keys': keys})
 
 
 def get_dataset_geojson(request, table, page_number):
+    """
+    Creates geojson from the geospatial columns of a given page of a table
+    """
+    # TODO is this function finished? Request is not used (´；ω；`)
+
     id_range, page_count = get_pagination_id_range(table, page_number)
 
     # Get a session
@@ -479,6 +524,7 @@ def get_dataset_geojson(request, table, page_number):
     geospatial_columns = session.query(geo.column).filter(geo.dataset_uuid == table).all()
     geo_column_objects = []
     geo_column_names = []
+    # TODO whut dis?
     for col in geospatial_columns:
         geo_column_objects.append(geofunc.ST_AsGeoJSON(getattr(t, col[0])))
         geo_column_names.append(col[0])
@@ -509,14 +555,17 @@ def get_dataset_geojson(request, table, page_number):
     return JsonResponse(geojson, safe=False)
 
 
-
-
 def test_response(request):
+    """
+    TODO Does this do anything?
+    """
     return HttpResponse('yay')
 
 
 def convert_time_columns(df, datetime_identifiers=['time', 'date']):
-    # Find and convert time and date columns based on name
+    """
+    Find and convert time and date columns based on name
+    """
     for c in df.columns:
         for d in datetime_identifiers:
             if d in c.lower():
@@ -525,7 +574,9 @@ def convert_time_columns(df, datetime_identifiers=['time', 'date']):
 
 
 def convert_nans(rows):
-    # Convert np.NaN objects to 'null' so rows is JSON serializable
+    """
+    Convert np.NaN objects to 'null' so rows is JSON serializable
+    """
     for row in rows:
         for i, e in enumerate(row):
             try:
@@ -537,6 +588,9 @@ def convert_nans(rows):
 
 
 def get_pagination_id_range(table, page_number):
+    """
+    Determine the number of rows and number of pages when displaying a table
+    """
     # Get a session
     session = m.get_session()
 
@@ -558,8 +612,14 @@ def get_pagination_id_range(table, page_number):
 
     return id_range, page_count
 
+
 def Session():
+    """
+    Creates and returns a session
+    """
     from aldjemy.core import get_engine
+    # Get the engine from aldjemy
     engine = get_engine()
+    # Create the session with tyhe engine
     _Session = sessionmaker(bind=engine)
     return _Session()
