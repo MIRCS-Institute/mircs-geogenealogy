@@ -1,6 +1,7 @@
 $( document ).ready(function() {
   $('#fileUploadForm #id_file_upload').change( function() {
     $('.dimmer').dimmer('show', function(){
+      //Get form data
       var formData = new FormData($('#fileUploadForm')[0]);
       console.log(formData);
       $.ajax({
@@ -43,27 +44,30 @@ $( document ).ready(function() {
               //generate the form
               var form = $("<form class='ui form geospatialColumnForm'></form>")
               form.append($("<label for='GeospatialCol_name'> GeoSpatial Column Name: <label/>"));
+              //Create column name and default to geom
               var GeospatialCol_name = $("<div class=\"field\"><input type='text' id='GeospatialCol_name' name='name' value='geom'></div>");
               form.append(GeospatialCol_name);
 
-
+              //Create lat/Lon select columns
               var lat_col = $( "<select id='lat_col' name='lat_col'></select>");
               var lon_col = $("<select id='lon_col' name='lon_col'></select>");
-
+              //Iterate through columns and append to lat/lon selector
               $.each(data['columns'],function(key,value){
                 lat_col.append($("<option></option>").attr("value",value).text(value));
                 lon_col.append($("<option></option>").attr("value",value).text(value));
               });
-
+              //Append label to Lat selector as Select Latitude
               form.append($("<label for='lat_col'> Select Latitude</label>"));
               form.append($('<div class=\"field\"></div>').append(lat_col));
+              //Append label to Lon selector as Select Longitude
               form.append($("<label for='lon_col'> Select Longitude</label>"));
               form.append($('<div class=\"field\"></div>').append(lon_col));
-
+              //Append label for srid as SRID
               form.append($("<label for='srid'> SRID: </label>"));
+              //Default srid to 4326
               var srid = $("<div class=\"field\"><input type='text' id='srid' name='srid' value='4326'></input></div>");
               form.append(srid);
-
+              //Create geocolumn type and set as latlon
               var GeoCol_type = $( "<input></input>",{'type':'hidden', 'id': 'GeoCol_type', 'name': 'type', 'value': 'latlon'});
               form.append(GeoCol_type);
 
