@@ -32,7 +32,6 @@ def home(request):
     """
 
     # Connect to the session
-    db = Session().connection()  # TODO Is this required?
     session = m.get_session()
 
     # Create a table map to pass to the html file
@@ -54,7 +53,7 @@ def upload_file(request):
     Render a file upload form
     """
 
-    # TODO figure out what this does and comment it
+    # Check to make sure it is not a Post request
     if request.method == 'POST':
         return HttpResponseRedirect('test_response')
     else:
@@ -267,7 +266,7 @@ def manage_dataset(request, table):
         m.DATASET_KEYS.dataset_uuid == table
     ).all()
     session.close
-    # Get the relations for the table being queried TODO is this correct?
+    # Get the user defined joins for the table
     joins = session.query(
         m.DATASET_JOINS
     ).filter(
@@ -293,7 +292,7 @@ def append_dataset(request, table):
     Parameters:
     table (str) - the name of the table to be displayed. This should be a UUID
     """
-    # TODO Comment the if and the else
+    # If it is POST append the dataset
     if request.method == 'POST':
         # Get the POST data
         post_data = dict(request.POST)
@@ -316,12 +315,20 @@ def append_dataset(request, table):
 
         # Get a session
         session = m.get_session()
-        # TODO Comment this properly
+        # Store the table uuid
         table_uuid = table
+
+        # Get the table model
         table = getattr(m.Base.classes, table)
+
+        # Get the current highest row id in the table
         query = session.query(func.max(table.id).label("last_id"))
         idMax = query.one()
-        result = table_generator.insert_df(df, table, session)  # TODO result is not used. Should it be?
+
+        # Append the to the table with a batch insert
+        table_generator.insert_df(df, table, session)
+
+        # Get the new highest row id in the table
         newIdMax = query.one()
 
         # Create entry in transaction table for append
@@ -336,7 +343,7 @@ def append_dataset(request, table):
 
         # Close the session
         session.close()
-        # TODO comment this
+
         return redirect('/manage/'+table_uuid)
     else:
         # Upload file form (Used for appending)
@@ -352,7 +359,7 @@ def add_dataset_key(request, table):
     """
     Add a key to a dataset
     """
-    # TODO Comment if else
+    # If POST add the key
     if request.method == 'POST':
         # Get the POST parameter
         post_data = dict(request.POST)
@@ -390,9 +397,10 @@ def add_dataset_key(request, table):
         # Redirect to the manage_dataset page
         return redirect('/manage/'+table)
     else:
-        # TODO Don't understand
+        # Get the columns in the table and add them to the dropdown in the form
         columns = [str(x).split('.')[1] for x in getattr(m.Base.classes, table).__table__.columns]
         form = AddDatasetKey(zip(columns, columns))
+        # Return the form
         return render(request, 'add_dataset_key.html', {'form': form})
 
 
@@ -485,8 +493,6 @@ def get_dataset_keys(request, table):
     """
     Get Table Keys
     """
-    # TODO is this function finished? Request is not used (´；ω；`)
-    # TODO I don't get this function
 
     # Get the session
     session = m.get_session()
@@ -498,8 +504,10 @@ def get_dataset_keys(request, table):
     )
     # Close the session
     session.close()
-    # Read the ???
+    # Get the tabley keys
     df = pd.read_sql(query.statement, query.session.bind)
+
+    # Append and return the keys as JSON
     keys = []
     for index, row in df.iterrows():
         keys.append([row['index_name'], row['dataset_columns']])
@@ -510,8 +518,7 @@ def get_dataset_geojson(request, table, page_number):
     """
     Creates geojson from the geospatial columns of a given page of a table
     """
-    # TODO is this function finished? Request is not used (´；ω；`)
-
+    # Get the paraemeters for the number og pages and how many items are on each page
     id_range, page_count = get_pagination_id_range(table, page_number)
 
     # Get a session
@@ -524,7 +531,7 @@ def get_dataset_geojson(request, table, page_number):
     geospatial_columns = session.query(geo.column).filter(geo.dataset_uuid == table).all()
     geo_column_objects = []
     geo_column_names = []
-    # TODO whut dis?
+    # Create the geospatial object from the columns
     for col in geospatial_columns:
         geo_column_objects.append(geofunc.ST_AsGeoJSON(getattr(t, col[0])))
         geo_column_names.append(col[0])
@@ -557,7 +564,7 @@ def get_dataset_geojson(request, table, page_number):
 
 def test_response(request):
     """
-    TODO Does this do anything?
+    Test function for returns
     """
     return HttpResponse('yay')
 
