@@ -67,6 +67,33 @@ def insert_df(df, table, session, geospatial_columns=None):
     return
 
 
+def get_geospatial_columns(table_uuid):
+    session = m.get_session()
+    res = session.query(m.GEOSPATIAL_COLUMNS.column_definition).filter(
+        m.GEOSPATIAL_COLUMNS.dataset_uuid == table_uuid
+    )
+    columns = []
+    for col in res:
+        columns.append(parse_geospatial_column_string(col[0]))
+    session.close()
+    return columns
+
+
+def parse_geospatial_column_string(geospatial_column_string):
+    # For each geospatial column, create a dictionary using fields as keys to store values
+    for column in geospatial_column_string.split(','):
+        # Create the dictionary
+        geospatial_column = {'column_definition': column}
+
+        for field in column.split('&'):
+            field = field.split('=')
+            # "exampleone=7&exampletwo=8" -> {"exampleone":7, "exampletwo":8}
+            geospatial_column[field[0]] = field[1]
+
+        # Append the dictionary to geospatial_columns (for the to_sql function)
+    return geospatial_column
+
+
 def get_alchemy_types(mapped_types):
     rt = []
     for t in mapped_types:

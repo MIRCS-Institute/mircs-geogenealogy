@@ -142,23 +142,15 @@ def create_table(request):
         # Parse the string returned from the form
         geospatial_string = post_data['geospatial_columns'][0]
         geospatial_columns = []
-        # For each geospatial column, create a dictionary using fields as keys to store values
-        for column in geospatial_string.split(','):
-            # Create the dictionary
-            c = {}
-            #
-            for field in column.split('&'):
-                field = field.split('=')
-                # "exampleone=7&exampletwo=8" -> {"exampleone":7, "exampletwo":8}
-                c[field[0]] = field[1]
+        for col in  geospatial_string.split(','):
+            geospatial_columns.append(table_generator.parse_geospatial_column_string(col))
 
-            # Append the dictionary to geospatial_columns (for the to_sql function)
-            geospatial_columns.append(c)
-
+        for c in geospatial_columns:
             # Add geospatial columns to the session
             geo_col = m.GEOSPATIAL_COLUMNS(
                 dataset_uuid=table_uuid,
-                column=c['name']
+                column=c['name'],
+                column_definition=c['column_definition']
             )
             session.add(geo_col)
 
@@ -325,8 +317,10 @@ def append_dataset(request, table):
         query = session.query(func.max(table.id).label("last_id"))
         idMax = query.one()
 
+        geospatial_columns = table_generator.get_geospatial_columns(table_uuid)
+
         # Append the to the table with a batch insert
-        table_generator.insert_df(df, table, session)
+        table_generator.insert_df(df, table, session, geospatial_columns)
 
         # Get the new highest row id in the table
         newIdMax = query.one()
