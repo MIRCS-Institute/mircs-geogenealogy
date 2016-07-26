@@ -320,7 +320,7 @@ def append_dataset(request, table):
         geospatial_columns = table_generator.get_geospatial_columns(table_uuid)
 
         # Append the to the table with a batch insert
-        table_generator.insert_df(df, table, session, geospatial_columns)
+        table_generator.insert_df(df, table, geospatial_columns)
 
         # Get the new highest row id in the table
         newIdMax = query.one()
@@ -338,7 +338,7 @@ def append_dataset(request, table):
         # Close the session
         session.close()
 
-        return redirect('/manage/'+table_uuid)
+        return redirect('/manage/' + table_uuid)
     else:
         # Upload file form (Used for appending)
         form = Uploadfile()
@@ -389,7 +389,7 @@ def add_dataset_key(request, table):
         session.close()
 
         # Redirect to the manage_dataset page
-        return redirect('/manage/'+table)
+        return redirect('/manage/' + table)
     else:
         # Get the columns in the table and add them to the dropdown in the form
         columns = [str(x).split('.')[1] for x in getattr(m.Base.classes, table).__table__.columns]
@@ -400,7 +400,19 @@ def add_dataset_key(request, table):
 
 def get_dataset_page(request, table, page_number):
     """"
-    Determine which rows to display on a page
+    Get the data for a specific page of a dataset
+
+    Parameters:
+    table (str) - The uuid of the table being requested
+    page_number (int) - The page being requested
+
+    Returns:
+    JsonResponse (str) - A JSON string containing:
+                                * median latitude for the current page
+                                * median longitude for the current page
+                                * pageCount - total number of pages in dataset
+                                * rows - a list of rows of data for the current page
+                                * columns - a list of columns in the dataset
     """
     # Determines the id range and number of pages needed to display the table
     id_range, page_count = get_pagination_id_range(table, page_number)
@@ -485,7 +497,14 @@ def join_datasets(request, table):
 
 def get_dataset_keys(request, table):
     """
-    Get Table Keys
+    Returns JSON containing a list of table keys that have been added for a
+    particular dataset
+
+    Parameters:
+    table (str) - The uuid of the table being requested
+
+    Returns:
+    JsonResponse({'keys': keys}) (str) - A JSON string containing a list of keys
     """
 
     # Get the session
@@ -510,9 +529,10 @@ def get_dataset_keys(request, table):
 
 def get_dataset_geojson(request, table, page_number):
     """
-    Creates geojson from the geospatial columns of a given page of a table
+    Returns geojson created from the geospatial columns of a given page of a table
     """
-    # Get the paraemeters for the number og pages and how many items are on each page
+    # Get the range of database IDs included in the current page of data as well
+    # as the total number of pages
     id_range, page_count = get_pagination_id_range(table, page_number)
 
     # Get a session
@@ -531,7 +551,7 @@ def get_dataset_geojson(request, table, page_number):
         geo_column_names.append(col[0])
 
     # build up geospatial select functions
-    # Note: we're just grabbing the first geospatial column right now
+    # Note: we're just grabbing the first geospatial column right now. it is explicitly labeled 'geometry'
     #       a picker for geo columns might be desirable someday
     geojson = session.query(t, geo_column_objects[0].label('geometry')).filter(
         t.id > id_range[0],
@@ -565,7 +585,15 @@ def test_response(request):
 
 def convert_time_columns(df, datetime_identifiers=['time', 'date']):
     """
-    Find and convert time and date columns based on name
+    Find date columns based on name and convert them to pandas datetime64 objects
+
+    Parameters:
+    df (pandas.DataFrame) - The dataframe to be converted
+    datetime_identifiers (list) - optional. A list of possible datetime column names
+                                  NOT case sensitive.
+
+    Retrun:
+    df (pandas.DataFrame) - Return the dataframe with datetime columns converted
     """
     for c in df.columns:
         for d in datetime_identifiers:
@@ -590,7 +618,19 @@ def convert_nans(rows):
 
 def get_pagination_id_range(table, page_number):
     """
-    Determine the number of rows and number of pages when displaying a table
+    Determine the range of IDs included in a specific page of data. Pages are
+    defined as n * settings.DATASET_ITEMS_PER_PAGE to n * (settings.DATASET_ITEMS_PER_PAGE + 1)
+    where n is the page_number
+
+    Parameters:
+    page_number (int) - The requested page number
+
+    Returns:
+    id_range (tuple) - The start and end of the range of database IDs included
+                       in the requested page
+    page_count (int) - The total number of pages available in the dataset.
+                       n / settings.DATASET_ITEMS_PER_PAGE where n is
+                       the total number of rows in the dataset
     """
     # Get a session
     session = m.get_session()
@@ -616,7 +656,8 @@ def get_pagination_id_range(table, page_number):
 
 def Session():
     """
-    Creates and returns a session
+    Creates and returns an sqlalchemy session mapped to django orm's models
+    this is no longer used meaningfully since the django orm has been fully replaced
     """
     from aldjemy.core import get_engine
     # Get the engine from aldjemy
