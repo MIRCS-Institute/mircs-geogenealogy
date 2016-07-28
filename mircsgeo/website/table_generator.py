@@ -8,6 +8,7 @@ from geoalchemy2 import Geometry
 
 import website.models as m
 
+# Pandas to human readable mapping
 type_mappings = {
     'int': 'integer',
     'float': 'float',
@@ -15,6 +16,7 @@ type_mappings = {
     'object': 'string'
 }
 
+# Human readable to alchemy mapping
 alchemy_types = {
     'integer': Integer,
     'float': Float,
