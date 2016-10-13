@@ -16,6 +16,7 @@ urlpatterns = [
     url(r'^get_dataset_keys/(?P<table>[^/]+)/$', views.get_dataset_keys, name='get_dataset_keys'),
     url(r'^manage/(?P<table>[^/]+)$', views.manage_dataset, name='manage_dataset'),
     url(r'^manage/append/(?P<table>[^/]+)$', views.append_dataset, name='append_dataset'),
+    url(r'^manage/update/(?P<table>[^/]+)$', views.update_dataset, name='update_dataset'),
     url(r'^get_dataset_page/(?P<table>[^/]+)/(?P<page_number>[0-9]+)/$', views.get_dataset_page, name='get_dataset_page'),
     url(r'^get_dataset_geojson/(?P<table>[^/]+)/(?P<page_number>[0-9]+)/$', views.get_dataset_geojson, name="get_dataset_geojson")
 ]

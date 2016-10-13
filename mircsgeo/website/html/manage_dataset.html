@@ -1,7 +1,9 @@
 <!-- Managing the datasets in the UI -->
 {% extends "base.html" %}
 {% load staticfiles %}
-
+{% block externalLibraries %}
+<script src="{% static 'js/manage_dataset.js' %}"></script>
+{% endblock %}
 {% block title %}Manage Dataset{% endblock %}
 {% block content %}
 
@@ -13,15 +15,34 @@
       <h1 class="ui header">{{ tablename }}</h1>
     </div>
     <div class="ui segment grid">
-        <div class="five wide column">
+        <div class="twelve wide column">
+           <div class="ui medium header">pick action to perform</div>
+             <form class="ui form" onsubmit="var sel = this.getElementsByTagName('select')[0]; window.location = sel.options[sel.selectedIndex].value;return false;">
+                <div class="field"">
+                 <select name="select action">
+                    <option value="/manage/update/{{table}}">Update Data</option>
+                    <option value="/manage/append/{{table}}">Append Data</option>
+                    <option value="/add_dataset_key/{{table}}">Add Data Key For Join</option>
+                    <option value="/manage/join/{{table}}">Join Data</option>
+                 </select>
+                 </div>
+                 <input class="ui button green" type="submit" value="Submit">
+             <form>
+         </div>
+         <!--
+         <div class="four wide column">
+          <a href="/manage/update/{{table}}" class="ui button blue fluid">Update Data</a>
+        </div>
+        <div class="four wide column">
           <a href="/manage/append/{{table}}" class="ui button green fluid">Append Data</a>
         </div>
-        <div class="six wide column">
+        <div class="five wide column">
           <a href="/add_dataset_key/{{table}}" class="ui button orange fluid">Add Data Key For Join</a>
         </div>
-        <div class="five wide column">
+        <div class="three wide column">
           <a href="/manage/join/{{table}}" class="ui button yellow fluid">Join Data</a>
         </div>
+        -->
         <div class="eight wide column">
           <div class="ui medium header">Keys</div>
           <div class="ui list">
