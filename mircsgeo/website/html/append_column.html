@@ -1,0 +1,55 @@
+<!-- updates the dataset to the form-->
+{% extends "base.html" %}
+{% load staticfiles %}
+
+{% block externalLibraries %}
+<link rel="stylesheet" href="{% static 'css/upload_file.css' %}">
+<script src="{% static 'js/createTable.js' %}"></script>
+<!--will have to change following line if we need javascript or delete if we don't-->
+<script src="{% static 'js/append_file.js' %}"></script>
+{% endblock %}
+
+{% block title %}Update Data{% endblock %}
+
+<!-- Gets the user to upload the file from the UI container and gets the datasets from fileUploadForm-->
+{% block content %}
+<div class="ui container">
+  <div class="ui segments">
+    <div class="ui segment">
+      <div class="ui inverted dimmer">
+        <div class="ui text loader">Loading ... </div>
+      </div>
+        <h1 class="ui header">Upload file with new column</h1>
+        <h3>note: the uploaded file should have the new column as the last column in the file and the other columns should be the columns to match with</h3>
+        <div id='uploader'>
+        <form id='fileUploadForm' enctype='multipart/form-data' class="ui form">
+          {% csrf_token %}
+          <div class="ui input">
+            {{ form }}
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="ui segment">
+      <div class="sixteen wide column">
+        <div id='primaryKeyPicker' style="display:none;">
+          <form id='fileUploadForm' enctype='multipart/form-data' class="ui form" method="POST" action="/manage/append_column/{{ table }}">
+            {% csrf_token %}
+
+          <h3 class="ui header">Dataset</h3>
+
+          <table id='uploadedDataTable' class="ui celled striped table stackable">
+          </table>
+
+          <div class="field">
+            <input class="ui button green" type="submit" value="Submit"/>
+          </div>
+          </form>
+        </div>
+        <div id='uploadConfirmation'></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

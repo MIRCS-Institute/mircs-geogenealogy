@@ -141,18 +141,20 @@ def create_table(request):
 
         # Parse the string returned from the form
         geospatial_string = post_data['geospatial_columns'][0]
-        geospatial_columns = []
-        for col in  geospatial_string.split(','):
-            geospatial_columns.append(table_generator.parse_geospatial_column_string(col))
+        print len(geospatial_string)
+        if len(geospatial_string) > 0:
+            geospatial_columns = []
+            for col in  geospatial_string.split(','):
+                geospatial_columns.append(table_generator.parse_geospatial_column_string(col))
 
-        for c in geospatial_columns:
-            # Add geospatial columns to the session
-            geo_col = m.GEOSPATIAL_COLUMNS(
-                dataset_uuid=table_uuid,
-                column=c['name'],
-                column_definition=c['column_definition']
-            )
-            session.add(geo_col)
+            for c in geospatial_columns:
+                # Add geospatial columns to the session
+                geo_col = m.GEOSPATIAL_COLUMNS(
+                    dataset_uuid=table_uuid,
+                    column=c['name'],
+                    column_definition=c['column_definition']
+                )
+                session.add(geo_col)
 
         # Figure out the path to the file that was originally uploaded
         absolute_path = os.path.join(
@@ -192,7 +194,10 @@ def create_table(request):
         session.commit()
 
         # Generate a database table based on the data found in the CSV file
-        table_generator.to_sql(df, datatypes, table_uuid, schema, geospatial_columns)
+        if len(geospatial_string) > 0:
+            table_generator.to_sql(df, datatypes, table_uuid, schema, geospatial_columns)
+        else:
+            table_generator.to_sql(df, datatypes, table_uuid, schema)
 
         session.close()
         return redirect('/')
@@ -276,13 +281,71 @@ def manage_dataset(request, table):
         'joins': joins
     })
 
+def append_column(request, table):
+    """
+    append a new column to a table
 
-def append_dataset(request, table):
+    parameters:
+    table(str) - uid of the table to add the column too
+    """
+
+    # If it is POST append the column
+    if request.method == 'POST':
+        # Get the POST data
+        post_data = dict(request.POST)
+
+        # Figure out the path to the file that was originally uploaded
+        absolute_path = os.path.join(
+            os.path.dirname(__file__),
+            settings.MEDIA_ROOT,
+            request.session['temp_filename']  # Use the filepath stored in the session
+                                              # from when the user originally uploaded
+                                              # the file
+        )
+
+        # Use pandas to read the uploaded file as a CSV
+        df = pd.read_csv(absolute_path)
+        df = convert_time_columns(df)
+
+        # Replace spaces with underscores in the column names to be used in the db table
+        df.columns = [x.replace(" ", "_") for x in df.columns]
+        datatypes = table_generator.get_readable_types_from_dataframe(df)
+
+        # Get a session
+        session = m.get_session()
+
+        # Append the column to the table
+        ids = table_generator.insert_column(df, datatypes, table)
+
+        # Create entry in transaction table for appending column
+        transaction = m.DATASET_TRANSACTIONS(
+            dataset_uuid=table,
+            transaction_type=m.transaction_types[3],
+            rows_affected=ids,
+            affected_row_ids=range(1,ids),
+        )
+        session.add(transaction)
+        session.commit()
+        # Close the session
+        session.close()
+
+        return redirect('/manage/' + table)
+    else:
+        # Upload file form (Used for appending)
+        form = Uploadfile()
+        # Render the append column page
+        return render(request, 'append_column.html', {
+            'form': form,
+            'table': table
+        })
+
+def append_dataset(request, table, flush=False):
     """
     Append dataset to existing table
 
     Parameters:
     table (str) - the name of the table to be displayed. This should be a UUID
+    flush (bool) - if True, it truncates the table first (Default: False)
     """
     # If it is POST append the dataset
     if request.method == 'POST':
@@ -318,6 +381,10 @@ def append_dataset(request, table):
         idMax = query.one()
 
         geospatial_columns = table_generator.get_geospatial_columns(table_uuid)
+
+        if flush:
+            table_generator.truncate_table(table)
+
 
         # Append the to the table with a batch insert
         table_generator.insert_df(df, table, geospatial_columns)
@@ -356,7 +423,7 @@ def update_dataset(request, table):
     """
     # If it is POST update the dataset
     if request.method == 'POST':
-        #database stuff goes here
+        append_dataset(request, table, flush=True)
         return redirect('/manage/' + table)
     else:
         # Upload file form (Used for appending)

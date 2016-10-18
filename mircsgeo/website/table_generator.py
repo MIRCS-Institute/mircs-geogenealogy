@@ -3,8 +3,9 @@ import pandas as pd
 
 from sqlalchemy import create_engine, MetaData, Table, Column, Integer, \
                        String, Float, DateTime, ForeignKeyConstraint, ForeignKey,\
-                       Enum, UniqueConstraint, Boolean
+                       Enum, UniqueConstraint, Boolean, func
 from geoalchemy2 import Geometry
+from types import StringType
 
 import website.models as m
 
@@ -78,7 +79,68 @@ def create_table(df, datatypes, table_name, schema, geospatial_columns=None):
     m.m.create_all(m.engine)
     m.refresh()
     return table
+def insert_column(df,datatypes, table):
+    """
+    add a new column to the table
 
+    Arguments:
+    df - the data added to the table. should have columns to match with and the new columnList
+    datatypes - list of python datatypes of the columns
+    table - the uid of the table to add the column to_csv
+
+    returns:
+    max id of rows affected
+    """
+    #define conversion between python types and psql types
+    psql_types = {
+        'integer': 'integer',
+        'float': 'decimal',
+        'datetime': 'DateTime',
+        'string': 'text'
+    }
+    #prepare variables
+    columnList = df.columns.values.tolist()
+    newCol = columnList[len(columnList)-1]
+    columnList = columnList[:len(columnList)-1]
+    table = getattr(m.Base.classes, table)
+
+    #add the column
+    sql = "ALTER TABLE mircs.\"%s\" ADD COLUMN \"%s\" %s" % (table.__name__,newCol, psql_types[datatypes[len(datatypes)-1]])
+    m.engine.execute(sql)
+
+    #for every row in the dataframe
+    for row in df.itertuples():
+        matchString=""
+
+        #get the parameters to match on
+        for col in columnList:
+            sql="SELECT data_type FROM information_schema.columns WHERE table_name = '%s' AND column_name ='%s'" % (table.__name__,col)
+            typeSql = m.engine.execute(sql)
+            for k in typeSql:
+                dt = k[0]
+            if dt == 'character varying':
+                matchString = "%s \"%s\"='%s' AND" % (matchString,col,row[columnList.index(col)+1])
+            else:
+                matchString = "%s \"%s\"=%s AND" % (matchString,col,row[columnList.index(col)+1])
+
+        #add the entry for the new row based on the matchstring
+        matchString = matchString[:len(matchString)-3]
+        sql="SELECT data_type FROM information_schema.columns WHERE table_name = '%s' AND column_name ='%s'" % (table.__name__,col)
+        typeSql = m.engine.execute(sql)
+        for k in typeSql:
+            dt = k[0]
+        if dt == 'character varying':
+            sql = "UPDATE mircs.\"%s\" SET \"%s\"='%s' WHERE %s" % (table.__name__,newCol,row[len(row)-1],matchString)
+        else:
+            sql = "UPDATE mircs.\"%s\" SET \"%s\"=%s WHERE %s" % (table.__name__,newCol,row[len(row)-1],matchString)
+        m.engine.execute(sql)
+
+    #get return value i.e. max id of rows affected (used fr transaction table entry)
+    sql = "SELECT MAX(id) FROM mircs.\"%s\"" % (table.__name__,)
+    res = m.engine.execute(sql)
+    for k in res:
+        ret = k[0]
+    return ret
 
 def insert_df(df, table, geospatial_columns=None):
     """
@@ -100,6 +162,7 @@ def insert_df(df, table, geospatial_columns=None):
         if geospatial_columns is not None:
             for c in geospatial_columns:
                 row[c['name']] = 'SRID=%s;POINT(%s %s)' % (c['srid'], row[c['lon_col']], row[c['lat_col']])
+
     m.engine.execute(
         table.__table__.insert(),
         insert_dict
@@ -212,3 +275,34 @@ def convert_type(dtype):
         if t in d:
             return type_mappings[t]
     return None
+
+def truncate_table(table):
+    """
+    Truncates the table.
+
+    Parameters:
+    table_name (str) - the name of the table to truncate
+    """
+
+    session = m.get_session()
+
+    max_id_query = session.query(func.max(table.id).label("last_id")).one()[0]
+    min_id_query = session.query(func.min(table.id).label("first_id")).one()[0]
+    row_count = session.query(func.count(table.id)).one()[0]
+
+    session.execute("DELETE FROM mircs.\"%s\" WHERE id >= 0" % table.__name__) # Delete all rows
+    session.execute("ALTER SEQUENCE mircs.\"%s_id_seq\" RESTART WITH 1" % table.__name__) # Reset the id
+    session.commit()
+
+
+
+    transaction = m.DATASET_TRANSACTIONS( # Makes a transaction
+        dataset_uuid=table.__name__,
+        transaction_type=m.transaction_types[4],
+        rows_affected=row_count,
+        affected_row_ids=range(min_id_query, max_id_query),
+    )
+
+    session.add(transaction)
+    session.commit()
+    session.close()
