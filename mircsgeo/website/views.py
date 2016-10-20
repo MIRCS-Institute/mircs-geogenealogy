@@ -277,12 +277,13 @@ def manage_dataset(request, table):
     })
 
 
-def append_dataset(request, table):
+def append_dataset(request, table, flush=False):
     """
     Append dataset to existing table
 
     Parameters:
     table (str) - the name of the table to be displayed. This should be a UUID
+    flush (bool) - if True, it truncates the table first (Default: False)
     """
     # If it is POST append the dataset
     if request.method == 'POST':
@@ -318,6 +319,11 @@ def append_dataset(request, table):
         idMax = query.one()
 
         geospatial_columns = table_generator.get_geospatial_columns(table_uuid)
+        print geospatial_columns
+
+        if flush:
+            table_generator.truncate_table(table)
+
 
         # Append the to the table with a batch insert
         table_generator.insert_df(df, table, geospatial_columns)
@@ -347,7 +353,25 @@ def append_dataset(request, table):
             'form': form,
             'table': table
         })
+def update_dataset(request, table):
+    """
+    update  dataset to existing table
 
+    Parameters:
+    table (str) - the name of the table to be displayed. This should be a UUID
+    """
+    # If it is POST update the dataset
+    if request.method == 'POST':
+        append_dataset(request, table, flush=True)
+        return redirect('/manage/' + table)
+    else:
+        # Upload file form (Used for appending)
+        form = Uploadfile()
+        # Render the append dataset page
+        return render(request, 'update_dataset.html', {
+            'form': form,
+            'table': table
+        })
 
 def add_dataset_key(request, table):
     """
