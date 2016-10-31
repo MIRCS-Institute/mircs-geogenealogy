@@ -18,7 +18,7 @@
         <div class="twelve wide column">
            <div class="ui medium header">pick action to perform</div>
              <form class="ui form" onsubmit="var sel = this.getElementsByTagName('select')[0]; window.location = sel.options[sel.selectedIndex].value;return false;">
-                <div class="field"">
+                <div class="field">
                  <select name="select action">
                     <option value="/manage/update/{{table}}">Update Data</option>
                     <option value="/manage/append/{{table}}">Append Data</option>
