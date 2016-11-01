@@ -349,24 +349,8 @@ def append_dataset(request, table, flush=False):
     """
     # If it is POST append the dataset
     if request.method == 'POST':
-        # Get the POST data
-        post_data = dict(request.POST)
-        # Get teh primary key from the posted data
-        datatypes = post_data['datatypes'][0].split(',')
 
-        # Figure out the path to the file that was originally uploaded
-        absolute_path = os.path.join(
-            os.path.dirname(__file__),
-            settings.MEDIA_ROOT,
-            request.session['temp_filename']  # Use the filepath stored in the session
-                                              # from when the user originally uploaded
-                                              # the file
-        )
-        # Use pandas to read the uploaded file as a CSV
-        df = pd.read_csv(absolute_path)
-        df = convert_time_columns(df)
-        # Replace spaces with underscores in the column names to be used in the db table
-        df.columns = [x.replace(" ", "_") for x in df.columns]
+        df = create_df_from_upload(request)
 
         # Get a session
         session = m.get_session()
@@ -381,6 +365,11 @@ def append_dataset(request, table, flush=False):
         idMax = query.one()
 
         geospatial_columns = table_generator.get_geospatial_columns(table_uuid)
+        print geospatial_columns
+
+        if flush:
+            table_generator.truncate_table(table)
+
 
         if flush:
             table_generator.truncate_table(table)
@@ -423,7 +412,14 @@ def update_dataset(request, table):
     """
     # If it is POST update the dataset
     if request.method == 'POST':
-        append_dataset(request, table, flush=True)
+        df = create_df_from_upload(request)
+        igr_cols = request.POST.getlist('ignored_cols')
+        table_generator.update_dataset(
+            df,
+            table,
+            int(request.POST.get('num_ucols')),
+            igr_cols if igr_cols is not None else []
+        )
         return redirect('/manage/' + table)
     else:
         # Upload file form (Used for appending)
@@ -738,6 +734,27 @@ def get_pagination_id_range(table, page_number):
 
     return id_range, page_count
 
+def create_df_from_upload(request):
+    # Get the POST data
+    post_data = dict(request.POST)
+    # Get teh primary key from the posted data
+    datatypes = post_data['datatypes'][0].split(',')
+
+    # Figure out the path to the file that was originally uploaded
+    absolute_path = os.path.join(
+        os.path.dirname(__file__),
+        settings.MEDIA_ROOT,
+        request.session['temp_filename']  # Use the filepath stored in the session
+                                          # from when the user originally uploaded
+                                          # the file
+    )
+    # Use pandas to read the uploaded file as a CSV
+    df = pd.read_csv(absolute_path)
+    df = convert_time_columns(df)
+    # Replace spaces with underscores in the column names to be used in the db table
+    df.columns = [x.replace(" ", "_") for x in df.columns]
+
+    return df
 
 def Session():
     """

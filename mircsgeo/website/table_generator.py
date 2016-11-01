@@ -34,7 +34,7 @@ def to_sql(df, datatypes, table_name, schema, geospatial_columns=None):
     df (pandas.DataFrame) - The DataFrame the table will be generated based on.
                             The data found in this DataFrame will be loaded into the table
     datatypes (list) - A list of SQLAlchemy column datatypes
-    table_name (str) - The name the table will be given
+    table_name (str) - The name tusable_colshe table will be given
     schema (str) - The schema the table will be created into
     geospatial_columns(list) - A list of geospatial columns of the type returned
                                by get_geospatial_columns()
@@ -155,6 +155,7 @@ def insert_df(df, table, geospatial_columns=None):
     Nothing
     """
     insert_dict = df.to_dict('records')
+
     for row in insert_dict:
         for c in row:
             if pd.isnull(row[c]):
@@ -275,6 +276,88 @@ def convert_type(dtype):
         if t in d:
             return type_mappings[t]
     return None
+
+def update_dataset(df, table, confidence, ignored_cols=[]):
+    """
+    Takes a dataframe of changes to be made to the data and updates the proper
+    rows using a given confidence value.
+
+    Parameters:
+    df (pandas.DataFrame) - The dataframe with the proper row values
+    table (str) - The name of the table that being updated
+    confidence (int) - number of columns need to match before the row's updated.
+    ignored_cols (list) -   A list of the columns that the user doesn't want to
+                            be included when checking confidence
+
+    Returns:
+    Nothing
+    """
+    num_col = len(df.columns) # Gets the numbers of columns
+    orm = getattr(m.Base.classes, table) # Gets the mapper for the table
+    usable_cols = [x for x in df.columns if x not in ignored_cols]
+    for index, row in df.iterrows():
+        query = 'SELECT * FROM mircs."%s" WHERE ' % table
+        num_of_ors = num_col - confidence - len(ignored_cols)
+        print (num_of_ors, num_col, confidence, len(ignored_cols), ignored_cols)
+        for i in range(num_of_ors):
+            col = usable_cols[i]
+            query += '"%s"=\'%s\' ' % (col, getattr(row, col))
+            if i != num_of_ors - 1:
+                query += 'OR '
+            else:
+                query += ';'
+        df_sql = pd.read_sql(query, m.engine)
+        best = (None, 0)
+        extras = [] # Hold all rows that have the same number of matches as best
+        for r_i, r_row in df_sql.iterrows():
+            count = 0
+            for col in usable_cols:
+                if row[col] == r_row[col]:
+                    count += 1
+            if count > best[1] and count >= confidence:
+                extras = []
+                best = (r_i, count)
+            elif count == best[1] and count > 0:
+                extras.append((r_i))
+        if len(extras) == 0 and best[0] is not None:
+            r_row = df_sql.loc[best[0]].to_dict()
+            for col in df.columns:
+                r_row[col] = row[col]
+            # It is possible that the geospatial columns were modified. The
+            # obj might need to be regenerated, we'll do that always to be safe.
+            session = m.get_session()
+            geo_col = m.GEOSPATIAL_COLUMNS.__table__
+            try:
+                col_defs = session.query(geo_col.c.column_definition).\
+                filter(geo_col.c.dataset_uuid == table).all()
+            except:
+                raise
+            finally:
+                session.close()
+
+            for col_def in col_defs:
+                col_def = col_def[0]
+                col_dict = {}
+                col_data = col_def.split('&')
+                for data in col_data:
+                    splt = data.split('=')
+                    col_dict[splt[0]] = splt[1]
+                r_row[col_dict['name']] = 'SRID=%s;POINT(%s %s)' % \
+                (col_dict['srid'], r_row[col_dict['lon_col']], r_row[col_dict['lat_col']])
+            session = m.get_session()
+            try:
+                query = 'UPDATE mircs.%s SET ' % table
+                for k, v in row.to_dict().items():
+                    query += '"%s" = \'%s\', ' % (k, v)
+                query = query[:len(query) - 2]
+                query += ' WHERE id = %i;' % r_row['id']
+
+                session.execute(query)
+                session.commit()
+            except:
+                raise
+            finally:
+                session.close()
 
 def truncate_table(table):
     """
