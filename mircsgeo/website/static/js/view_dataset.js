@@ -71,56 +71,76 @@ $( document ).ready(function() {
   }
 
   //Build page picker for pagination.
-  function buildPagePicker(parentElement, pageCount, selected) {
+  function buildPagePicker(parentElement, pageCount, selected)
+  {
     //Number of pages to display
     pageCount = Number(pageCount);
     //Selected page
     selected = Number(selected);
-    //Buttons for pagination
-    var startEndButtons = 3;
-    var buttonsPerSide = 5;
-    //Choose how many buttons to display.
-    if(selected < (startEndButtons + buttonsPerSide) || selected > (pageCount - (startEndButtons + buttonsPerSide))) {
-      startEndButtons += buttonsPerSide;
-    }
-    //Create link to previous page labelled as Previous
+	
+    //-----Build pagination bar-----
+	
+	//Settings
+	var pad = 4; //The number of page numbers shown between the start/end of the list and the elipses during truncation
+	var buttons = 19; //Total number of page number buttons + elipses. Should be an odd number
+	
+    //Add 'Previous' Button
     parentElement.append($('<a id="previousPage" class="item">Previous</a>'));
-    //Iterate through buttons and set active page
-    for(var i=0; i<=startEndButtons; i++) {
-      var linkElement = $('<a class="item">' + i + '</a>');
-      if(i === selected) {
-        linkElement.addClass('active');
-      }
-      parentElement.append(linkElement);
-    }
-    parentElement.append($('<div class="disabled item">...</div>'));
-    if(selected >= (startEndButtons + buttonsPerSide) && selected <= (pageCount - (startEndButtons + buttonsPerSide))) {
-      for(var i=-1*buttonsPerSide; i<0; i++) {
-        var linkElement = $('<a class="item">' + (selected + i) + '</a>');
-        if((selected + i) === selected) {
-          linkElement.addClass('active');
-        }
-        parentElement.append(linkElement);
-      }
-      //Iterate through buttons and set how many to show on each side of the list, depending on how many pages are displayed
-      for(var i=0; i<buttonsPerSide; i++) {
-        var linkElement = $('<a class="item">' + (selected + i) + '</a>');
-        if((selected + i) === selected) {
-          linkElement.addClass('active');
-        }
-        parentElement.append(linkElement);
-      }
-      parentElement.append($('<div class="disabled item">...</div>'));
-    }
-    for(var i=-1*startEndButtons; i<=0; i++) {
-      var linkElement = $('<a class="item">' + (i + pageCount) + '</a>');
-      if((i + pageCount) === selected) {
-        linkElement.addClass('active');
-      }
-      parentElement.append(linkElement);
-    }
+	
+    //Add page numbers
+	if(pageCount < buttons) //If all numbers can fit with no truncation (elipses)
+	{
+		for(var i=0; i<=pageCount; i++)
+		{
+			var linkElement = $('<a class="item">' + i + '</a>');
+			if(i === selected)
+			{
+				linkElement.addClass('active');
+			}
+			parentElement.append(linkElement);
+		}
+	}
+	else //If truncation is necessary
+	{
+		var index = 0; //Current page number
+		//b = current button index
+		for(var b=0; b < buttons; b++)
+		{
+			if(b == pad && selected > (buttons-1)/2) //At the place where the first (...) would go, if the selected page is in an appropriate place
+			{
+				parentElement.append($('<div class="disabled item">...</div>')); //Add elipses
+				if(selected >= pageCount-(buttons-pad-pad-1)) //If a second truncation will not be necessary...
+				{
+					index = pageCount-(buttons-pad-2); //...Set index to count up to the last page
+				}
+				else
+				{
+					index = selected-(buttons-pad-pad-3)/2; //Otherwise, set index to center the view around the selected page
+				}
+			}
+			//At the place where the second (...) would go, if this second truncation is necessary to reach the last page
+			else if(b == buttons-pad-1 && selected < pageCount-(buttons-1)/2  && index !== pageCount-pad) 
+			{
+				parentElement.append($('<div class="disabled item">...</div>')); //Add the elipses
+				index = pageCount-(pad-1); //Set index to count to the final page for the last button
+			}
+			else //If not truncating, add the button for this page number
+			{
+				var linkElement = $('<a class="item">' + index + '</a>');
+				if(index === selected)
+				{
+					linkElement.addClass('active');
+				}
+				parentElement.append(linkElement);
+				index += 1;
+			}
+		}
+	}
+	
+	//Add 'Next' Button
     parentElement.append('<a id="nextPage" class="item">Next</a>');
   }
+  
   //Initialize map
   function initMap(map, data) {
     // .setView([data['lat'], data['lon']], 13)
