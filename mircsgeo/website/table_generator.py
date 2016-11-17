@@ -42,7 +42,14 @@ def to_sql(df, datatypes, table_name, schema, geospatial_columns=None):
     Returns:
     table - The SQLAlchemy table object that was generated
     """
+    #replace parantheses in column names with their html numbers
+    #might have to do this for every entry in dataframe but haven't
+    #come across case where that was needed
+    df.columns = df.columns.str.replace('(','&#40')
+    df.columns = df.columns.str.replace(')','&#41')
+
     create_table(df, datatypes, table_name, schema, geospatial_columns)
+    print geospatial_columns
     table = getattr(m.Base.classes, table_name)
     insert_df(df, table, geospatial_columns)
     return table
@@ -66,6 +73,8 @@ def create_table(df, datatypes, table_name, schema, geospatial_columns=None):
     datatypes = get_alchemy_types(datatypes)
     columns = [Column('id', Integer, primary_key=True)]
     for i, c in enumerate(df.columns):
+        print i
+        print c
         columns.append(
             Column(c, datatypes[i])
         )
@@ -91,22 +100,16 @@ def insert_column(df,datatypes, table):
     returns:
     max id of rows affected
     """
-    #define conversion between python types and psql types
-    psql_types = {
-        'integer': 'integer',
-        'float': 'decimal',
-        'datetime': 'DateTime',
-        'string': 'text'
-    }
     #prepare variables
+    df.columns = df.columns.str.replace('(','&#40')
+    df.columns = df.columns.str.replace(')','&#41')
     columnList = df.columns.values.tolist()
     newCol = columnList[len(columnList)-1]
     columnList = columnList[:len(columnList)-1]
     table = getattr(m.Base.classes, table)
 
     #add the column
-    sql = "ALTER TABLE mircs.\"%s\" ADD COLUMN \"%s\" %s" % (table.__name__,newCol, psql_types[datatypes[len(datatypes)-1]])
-    m.engine.execute(sql)
+    add_column_to_table(table.__name__,newCol,datatypes[len(datatypes)-1])
 
     #for every row in the dataframe
     for row in df.itertuples():
@@ -154,8 +157,18 @@ def insert_df(df, table, geospatial_columns=None):
     Returns:
     Nothing
     """
+    df.columns = df.columns.str.replace('(','&#40')
+    df.columns = df.columns.str.replace(')','&#41')
+    columnList = df.columns.values.tolist()
+    datatypes = get_readable_types_from_dataframe(df)
+    for col in columnList:
+        print col
+        #sql="SELECT EXISTS(SELECT column_name FROM information_schema.columns WHERE table_name='%s' and column_name='%s')" % (table.__name__,col)
+        res = m.engine.execute("SELECT EXISTS(SELECT column_name FROM information_schema.columns WHERE table_name=%s and column_name=%s)",(table.__name__,col))
+        for k in res:
+            if k[0] != True:
+                add_column_to_table(table,col,datatypes[len(datatypes)-1])
     insert_dict = df.to_dict('records')
-
     for row in insert_dict:
         for c in row:
             if pd.isnull(row[c]):
@@ -163,13 +176,21 @@ def insert_df(df, table, geospatial_columns=None):
         if geospatial_columns is not None:
             for c in geospatial_columns:
                 row[c['name']] = 'SRID=%s;POINT(%s %s)' % (c['srid'], row[c['lon_col']], row[c['lat_col']])
-
     m.engine.execute(
         table.__table__.insert(),
         insert_dict
     )
     return
-
+def add_column_to_table(table, column_name,py_datatype):
+    psql_types = {
+        'integer': "integer",
+        'float': "decimal",
+        'datetime': "DateTime",
+        'string': "text"
+    }
+    sql = "ALTER TABLE mircs.\"%s\" ADD COLUMN \"%s\" %s" % (table.__name__,column_name, psql_types[py_datatype])
+    m.engine.execute(sql)
+    m.refresh()
 
 def get_geospatial_columns(table_uuid):
     """

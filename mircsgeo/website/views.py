@@ -197,6 +197,7 @@ def create_table(request):
         if len(geospatial_string) > 0:
             table_generator.to_sql(df, datatypes, table_uuid, schema, geospatial_columns)
         else:
+            print df.columns
             table_generator.to_sql(df, datatypes, table_uuid, schema)
 
         session.close()
