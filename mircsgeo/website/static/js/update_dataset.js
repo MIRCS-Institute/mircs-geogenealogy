@@ -1,4 +1,7 @@
 $(document).ready(function() {
+
+  $('select').dropdown()
+
   $('#fileUploadForm #id_file_upload').change( function() {
     $('.dimmer').dimmer('show', function(){
       //Get form data
@@ -37,41 +40,69 @@ $(document).ready(function() {
             $(this).append(input);
           });
 
-          $('[name="ignored_cols"]').change(function(event) {
-            var num_ign = $('[name="ignored_cols"]').val().length;
-
-            var conf_range = []; // Gengerate confidence range
-            for (var i = 1; i < data['columns'].length - num_ign; i++)
-              conf_range.push(i);
-            var num_ucols = $('[name="num_ucols"]');
-            num_ucols.html('');
-            conf_range.forEach(function(el) {
-              num_ucols.append("<option>" + el + "</option>");
-            });
-            num_ucols.dropdown('set selected', conf_range[(conf_range.length / 2) - num_ign]);
-          });
-
-          var ign_cols = $('[name="ignored_cols"]');
+          var key_cols = $('[name="key"]');
           data['columns'].forEach(function(el) {
-            ign_cols.append("<option>" + el + "</option>");
+            key_cols.append("<option value=\"" + el.replace(' ', '_') + "\">" + el + "</option>");
           });
 
-          var conf_range = []; // Gengerate confidence range
-          for (var i = 1; i < data['columns'].length; i++)
-            conf_range.push(i);
-
-          var num_ucols = $('[name="num_ucols"]');
-          conf_range.forEach(function(el) {
-            num_ucols.append("<option>" + el + "</option>");
+          key_cols.change(function(e) {
+            var key = key_cols.val();
+            console.log(key);
+            if (key == null)
+              $('[type="submit"]').prop('disabled', true);
+            else
+              $('[type="submit"]').prop('disabled', false);
           });
-
-          ign_cols.dropdown();
-          num_ucols.dropdown('set selected', conf_range[conf_range.length / 2]);
-
+          key_cols.dropdown();
         }
       });
       $('.dimmer').dimmer('hide');
     });
     return false;
+  });
+
+  $('#import').click(function() {
+    $('.ui.modal.import').modal('show');
+  });
+
+  $('#submit_import').click(function() {
+    columns = $('#key').val();
+    columns = columns.replace(/\'/g, '"');
+    columns = JSON.parse(columns);
+    $('#unique_key').dropdown('clear');
+    $('#unique_key').dropdown('set selected', columns);
+
+    $('.ui.modal.import').modal('hide');
+  });
+
+  $('#save').click(function() {
+    var href = window.location.href;
+    href = href.split('/');
+    uuid = href[href.length - 1]
+    var getCookie = function(name) {
+      var cookieValue = null;
+      if (document.cookie && document.cookie != '') {
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+          var cookie = jQuery.trim(cookies[i]);
+          // Does this cookie string begin with the name we want?
+          if (cookie.substring(0, name.length + 1) == (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+    var csrftoken = getCookie('csrftoken');
+    $.ajaxSetup({
+      beforeSend: function(xhr, settings) {
+        xhr.setRequestHeader(
+          "X-CSRFToken",
+          getCookie('csrftoken')
+        );
+      }
+    });
+    $.post('/add_dataset_key/' + uuid + '/', {'dataset_columns': $('#unique_key').val()});
   });
 });

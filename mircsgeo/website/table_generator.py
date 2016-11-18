@@ -298,7 +298,7 @@ def convert_type(dtype):
             return type_mappings[t]
     return None
 
-def update_dataset(df, table, confidence, ignored_cols=[]):
+def update_dataset(df, table, key):
     """
     Takes a dataframe of changes to be made to the data and updates the proper
     rows using a given confidence value.
@@ -306,42 +306,27 @@ def update_dataset(df, table, confidence, ignored_cols=[]):
     Parameters:
     df (pandas.DataFrame) - The dataframe with the proper row values
     table (str) - The name of the table that being updated
-    confidence (int) - number of columns need to match before the row's updated.
-    ignored_cols (list) -   A list of the columns that the user doesn't want to
-                            be included when checking confidence
+    key (list) -   The names of the columns that make up the key
 
     Returns:
     Nothing
     """
     num_col = len(df.columns) # Gets the numbers of columns
     orm = getattr(m.Base.classes, table) # Gets the mapper for the table
-    usable_cols = [x for x in df.columns if x not in ignored_cols]
     for index, row in df.iterrows():
         query = 'SELECT * FROM mircs."%s" WHERE ' % table
-        num_of_ors = num_col - confidence - len(ignored_cols)
-        print (num_of_ors, num_col, confidence, len(ignored_cols), ignored_cols)
-        for i in range(num_of_ors):
-            col = usable_cols[i]
+        for i in range(len(key)):
+            col = key[i].replace(' ', '_')
             query += '"%s"=\'%s\' ' % (col, getattr(row, col))
-            if i != num_of_ors - 1:
-                query += 'OR '
+            if i != len(key) - 1:
+                query += 'AND '
             else:
                 query += ';'
         df_sql = pd.read_sql(query, m.engine)
-        best = (None, 0)
-        extras = [] # Hold all rows that have the same number of matches as best
-        for r_i, r_row in df_sql.iterrows():
-            count = 0
-            for col in usable_cols:
-                if row[col] == r_row[col]:
-                    count += 1
-            if count > best[1] and count >= confidence:
-                extras = []
-                best = (r_i, count)
-            elif count == best[1] and count > 0:
-                extras.append((r_i))
-        if len(extras) == 0 and best[0] is not None:
-            r_row = df_sql.loc[best[0]].to_dict()
+        print df_sql.id.count()
+        if df_sql.id.count() == 1:
+
+            r_row = df_sql.iloc[0].to_dict()
             for col in df.columns:
                 r_row[col] = row[col]
             # It is possible that the geospatial columns were modified. The

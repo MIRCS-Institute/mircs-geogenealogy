@@ -34,26 +34,19 @@
           <form id='fileUploadForm' enctype='multipart/form-data' class="ui form" method="POST" action="/manage/update/{{ table }}">
             {% csrf_token %}
             <h3 class="ui header">Search Options</h3>
-            <div class="field">
-              <label>Ignored Columns</label>
+            <div class="required field">
+              <label>Unique Key</label>
               <p>
-                Sometimes a column has the same value in many rows (an example
-                could be <em>COUNTRY</em>). This makes the search very slow
-                because it can't refine it's search. Please add any columns that
-                should be ignored by search algorithm.
+                Create a unique key of columns to use to search for the row to
+                update. A key can be imported from the keys for the dataset. A
+                key can be saved to the dataset's keys.
               </p>
-              <select multiple="" name="ignored_cols" class="ui dropdown">
+              <select id="unique_key" multiple="" name="key" class="ui dropdown">
               </select>
             </div>
             <div class="field">
-              <label>Minimum number of unchanged columns</label>
-              <p>
-                What is the minimum number of unchanged columns in a single row?
-                That is to say, take the biggest number of changes in a single
-                row and substract it from the number of columns in the row.
-              </p>
-              <select name="num_ucols" class="ui dropdown">
-              </select>
+              <input id="import" class="ui button blue" type="button" value="Import key" />
+              <input id="save" class="ui button blue" type="button" value="Save key" />
             </div>
             <h3 class="ui header">Dataset</h3>
 
@@ -61,12 +54,29 @@
             </table>
 
             <div class="field">
-              <input class="ui button green" type="submit" value="Submit"/>
+              <input class="ui button green" type="submit" value="Submit" disabled/>
             </div>
           </form>
         </div>
         <div id='uploadConfirmation'></div>
       </div>
+    </div>
+  </div>
+</div>
+<div class="ui modal import">
+  <div class="ui form">
+    <h2>Import key from dataset</h2>
+    <div class="field">
+      <label>Keys:</label>
+      <select id="key">
+      {% for key in keys %}
+        <option value="{{ key.columns }}">{{ key.index }}</option>
+      {% endfor %}
+      </select>
+    </div>
+    <br>
+    <div class="field">
+      <button id="submit_import" class="ui green button">Import Key</button>
     </div>
   </div>
 </div>
