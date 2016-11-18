@@ -658,7 +658,13 @@ def get_dataset_geojson(request, table, page_number):
     return JsonResponse(geojson, safe=False)
 
 def download_dataset(request, table):
-    print( table )
+    """
+    Download full database table as .csv file
+
+    Parameters:
+    table (str) - the name of the table to be displayed. This should be a UUID
+    """
+
     # Get a session
     session = m.get_session()
     # Get the name of the file used to create the csv file being returned
@@ -672,13 +678,17 @@ def download_dataset(request, table):
 
     db = Session().connection()
 
+    #Create pandas dataframe from table
     df = pd.read_sql("SELECT * FROM " + schema + ".\"" + table + "\"",
                      db, params={'schema': schema, 'table': table})
 
+    #content_type tells browser that file is csv
     response = HttpResponse(content_type='text/csv')
+    #Content-Disposition tells browser name of file to be downloaded
     response['Content-Disposition'] = 'attachment; filename = export_%s'%file_name
-
+    #convert dataframe to csv
     df.to_csv(response)
+
     return response
 
 def test_response(request):
