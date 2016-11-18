@@ -238,7 +238,6 @@ def view_dataset(request, table):
         'tablename': file_name,
     })
 
-
 def manage_dataset(request, table):
     """
     Return a page for managing table data
@@ -404,6 +403,7 @@ def append_dataset(request, table, flush=False):
             'form': form,
             'table': table
         })
+
 def update_dataset(request, table):
     """
     update  dataset to existing table
@@ -657,6 +657,29 @@ def get_dataset_geojson(request, table, page_number):
         })
     return JsonResponse(geojson, safe=False)
 
+def download_dataset(request, table):
+    print( table )
+    # Get a session
+    session = m.get_session()
+    # Get the name of the file used to create the csv file being returned
+    file_name = str(session.query(
+        m.DATASETS.original_filename
+    ).filter(
+        m.DATASETS.uuid == table
+    ).one()[0])  # This returns a list containing a single element(original_filename)
+                 # The [0] gets the filename out of the list
+    session.close
+
+    db = Session().connection()
+
+    df = pd.read_sql("SELECT * FROM " + schema + ".\"" + table + "\"",
+                     db, params={'schema': schema, 'table': table})
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename = export_%s'%file_name
+
+    df.to_csv(response)
+    return response
 
 def test_response(request):
     """
