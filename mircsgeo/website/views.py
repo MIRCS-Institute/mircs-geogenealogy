@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.template import RequestContext
 from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 from django.conf import settings
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, class_mapper
 from sqlalchemy.schema import Index
 from sqlalchemy import func, or_
 import geoalchemy2.functions as geofunc
@@ -414,21 +414,30 @@ def update_dataset(request, table):
     # If it is POST update the dataset
     if request.method == 'POST':
         df = create_df_from_upload(request)
-        igr_cols = request.POST.getlist('ignored_cols')
+        key = request.POST.getlist('key')
         table_generator.update_dataset(
             df,
             table,
-            int(request.POST.get('num_ucols')),
-            igr_cols if igr_cols is not None else []
+            key
         )
         return redirect('/manage/' + table)
     else:
         # Upload file form (Used for appending)
         form = Uploadfile()
         # Render the append dataset page
+        session = m.get_session()
+        # Get all the keys belonging to this dataset
+        keys = session.query(m.dataset_keys).filter_by(dataset_uuid=table).all()
+        keys = [{
+            'index': x.index_name,
+            # Makes strings able to be stored in tags' value attr
+            'columns': json.dumps(x.dataset_columns).replace('"', '\'')
+            } for x in keys]
+
         return render(request, 'update_dataset.html', {
             'form': form,
-            'table': table
+            'table': table,
+            'keys': keys
         })
 
 def add_dataset_key(request, table):
@@ -439,7 +448,7 @@ def add_dataset_key(request, table):
     if request.method == 'POST':
         # Get the POST parameter
         post_data = dict(request.POST)
-        dataset_columns = post_data['dataset_columns']
+        dataset_columns = post_data['dataset_columns[]']
 
         # Get the table
         t = getattr(m.Base.classes, table)
