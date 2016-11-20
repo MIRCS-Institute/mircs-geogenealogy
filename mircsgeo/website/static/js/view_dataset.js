@@ -189,8 +189,9 @@ $( document ).ready(function() {
       //Popup some text for each feature. Grabbed from feature.key. Val is the value from the feature
       var popupText = "";
       $.each(feature.keys, function(key, val){
-        popupText += "<strong>"+val  + "</strong>: " + feature.properties[val] +"<br/>";
+        popupText += "<strong class='coloured'>"+val  + "</strong>: " + feature.properties[val] +"<br/>";
       });
+      popupText += "<button class='ui button'>Preeess mee</button>"
       layer.bindPopup(popupText, pOptions);
 
     }

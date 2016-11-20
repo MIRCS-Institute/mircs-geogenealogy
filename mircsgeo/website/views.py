@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.template import RequestContext
 from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 from django.conf import settings
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, class_mapper
 from sqlalchemy.schema import Index
 from sqlalchemy import func, or_
 import geoalchemy2.functions as geofunc
@@ -239,7 +239,6 @@ def view_dataset(request, table):
         'tablename': file_name,
     })
 
-
 def manage_dataset(request, table):
     """
     Return a page for managing table data
@@ -405,6 +404,7 @@ def append_dataset(request, table, flush=False):
             'form': form,
             'table': table
         })
+
 def update_dataset(request, table):
     """
     update  dataset to existing table
@@ -415,21 +415,30 @@ def update_dataset(request, table):
     # If it is POST update the dataset
     if request.method == 'POST':
         df = create_df_from_upload(request)
-        igr_cols = request.POST.getlist('ignored_cols')
+        key = request.POST.getlist('key')
         table_generator.update_dataset(
             df,
             table,
-            int(request.POST.get('num_ucols')),
-            igr_cols if igr_cols is not None else []
+            key
         )
         return redirect('/manage/' + table)
     else:
         # Upload file form (Used for appending)
         form = Uploadfile()
         # Render the append dataset page
+        session = m.get_session()
+        # Get all the keys belonging to this dataset
+        keys = session.query(m.dataset_keys).filter_by(dataset_uuid=table).all()
+        keys = [{
+            'index': x.index_name,
+            # Makes strings able to be stored in tags' value attr
+            'columns': json.dumps(x.dataset_columns).replace('"', '\'')
+            } for x in keys]
+
         return render(request, 'update_dataset.html', {
             'form': form,
-            'table': table
+            'table': table,
+            'keys': keys
         })
 
 def add_dataset_key(request, table):
@@ -440,7 +449,7 @@ def add_dataset_key(request, table):
     if request.method == 'POST':
         # Get the POST parameter
         post_data = dict(request.POST)
-        dataset_columns = post_data['dataset_columns']
+        dataset_columns = post_data['dataset_columns[]']
 
         # Get the table
         t = getattr(m.Base.classes, table)
@@ -753,6 +762,39 @@ def get_dataset_geojson(request, table, page_number):
         })
     return JsonResponse(geojson, safe=False)
 
+def download_dataset(request, table):
+    """
+    Download full database table as .csv file
+
+    Parameters:
+    table (str) - the name of the table to be displayed. This should be a UUID
+    """
+
+    # Get a session
+    session = m.get_session()
+    # Get the name of the file used to create the csv file being returned
+    file_name = str(session.query(
+        m.DATASETS.original_filename
+    ).filter(
+        m.DATASETS.uuid == table
+    ).one()[0])  # This returns a list containing a single element(original_filename)
+                 # The [0] gets the filename out of the list
+    session.close
+
+    db = Session().connection()
+
+    #Create pandas dataframe from table
+    df = pd.read_sql("SELECT * FROM " + schema + ".\"" + table + "\"",
+                     db, params={'schema': schema, 'table': table})
+
+    #content_type tells browser that file is csv
+    response = HttpResponse(content_type='text/csv')
+    #Content-Disposition tells browser name of file to be downloaded
+    response['Content-Disposition'] = 'attachment; filename = export_%s'%file_name
+    #convert dataframe to csv
+    df.to_csv(response)
+
+    return response
 
 def test_response(request):
     """
