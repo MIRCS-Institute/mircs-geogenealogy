@@ -10,6 +10,7 @@ import geoalchemy2.functions as geofunc
 import json
 
 import math
+import numbers
 
 import website.models as m
 from .forms import Uploadfile, AddDatasetKey
@@ -443,7 +444,6 @@ def add_dataset_key(request, table):
 
         # Get the table
         t = getattr(m.Base.classes, table)
-
         # Get the column objects for each selected column in the POST parameter
         column_objects = []
         for col in dataset_columns:
@@ -531,6 +531,102 @@ def get_dataset_page(request, table, page_number):
         'lon': median_lon
     })
 
+def get_joined_dataset(request,table,page_number):
+    """
+    get joined data for specific page of dataset
+
+    Parameters:
+    table (str) - The uuid of the table being requested
+    page_number (int) - The page being requested
+
+    Returns:
+    JsonResponse (str) - A JSON string containing:
+                                                  *uuids of databases joined to this one
+                                                  *data from those databases joined to entries on the current page
+    """
+    # Determines the id range and number of pages needed to display the table
+    id_range, page_count = get_pagination_id_range(table, page_number)
+
+    # Get a session
+    session = m.get_session()
+
+    # Get the object for the table we're working with
+    table_id = table
+    table = getattr(m.Base.classes, table)
+
+    # Query the table for rows within the correct range
+    query = session.query(
+        table
+    ).filter(
+        table.id > id_range[0],
+        table.id <= id_range[1]
+    )
+
+    # Get a DataFrame with the results of the query
+    df = pd.read_sql(query.statement, query.session.bind)
+
+    #query for joins in which the table is the main dataset
+    join_query = session.query(
+        m.DATASET_JOINS
+    ).filter(
+        m.DATASET_JOINS.dataset1_uuid == table_id
+    )
+    #get dataframe of join query
+    join_df = pd.read_sql(join_query.statement, join_query.session.bind)
+    columnList = join_df.columns.values.tolist()
+    joined_results = []
+    joined_database_ids = []
+    #for every dataset joined to this one
+    for row in join_df.itertuples():
+        i1_name = row[columnList.index('index1_name')+1]
+        d2_id = row[columnList.index('dataset2_uuid')+1]
+        joined_database_ids.append(d2_id)
+        i2_name = row[columnList.index('index2_name')+1]
+        #query for the join key from the main table
+        d1_key_query = session.query(
+            m.DATASET_KEYS
+        ).filter(
+            m.DATASET_KEYS.dataset_uuid == table_id,
+            m.DATASET_KEYS.index_name == i1_name
+        )
+        d1_key_df = pd.read_sql(d1_key_query.statement, d1_key_query.session.bind)
+        for row in d1_key_df.itertuples():
+            cols1= row[3]
+        #query for the join key from the joined table
+        d2_key_query = session.query(
+            m.DATASET_KEYS
+        ).filter(
+            m.DATASET_KEYS.dataset_uuid == d2_id,
+            m.DATASET_KEYS.index_name == i2_name
+        )
+        d2_key_df = pd.read_sql(d2_key_query.statement, d2_key_query.session.bind)
+        for row in d2_key_df.itertuples():
+            cols2 = row[3]
+        col_list = df.columns.tolist()
+        #for every entry on th dataset page
+        for row in df.itertuples():
+            matchString =""
+            #build matching parameter
+            for x in cols1:
+                sql="SELECT data_type FROM information_schema.columns WHERE table_name = '%s' AND column_name ='%s'" % (d2_id, x)
+                typeSql = m.engine.execute(sql)
+                for k in typeSql:
+                    dt = k[0]
+                if dt != 'character varying':
+                    matchString = "%s \"%s\"=%s AND" % (matchString,cols2[cols2.index(x)],row[col_list.index(x)+1])
+                else:
+                    matchString = "%s \"%s\"='%s' AND" % (matchString,cols2[cols2.index(x)],row[col_list.index(x)+1])
+            matchString = matchString[:len(matchString)-3]
+            #retrieve any entry from the joined dataset that corresponds to this entry
+            sql_stmt = "SELECT * FROM mircs.\"%s\" WHERE %s" %(d2_id,matchString)
+            result = m.engine.execute(sql_stmt)
+            #get result of sql query in the form of a dict and append to the final results
+            for j in result:
+                rowRes = dict(zip(j.keys(), j))
+                joined_results.append(rowRes)
+    return JsonResponse({
+        'joined_database_ids':json.dumps(joined_database_ids),
+        'data':json.dumps(joined_results)})
 
 def join_datasets(request, table):
     """

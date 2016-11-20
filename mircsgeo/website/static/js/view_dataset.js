@@ -8,6 +8,10 @@ $( document ).ready(function() {
     insertDatasetPage(data, 0);
     initMap(map, data);
   });
+  //example of getting data from datasets joined with this one
+  $.getJSON('/get_joined_dataset/' + getTableFromURL() + '/0/', function(data) {
+    //window.alert(JSON.stringify(data));
+  });
   //Populate map with json data
   $.getJSON('/get_dataset_geojson/' + getTableFromURL() + '/0/', function(data) {
     group = populateMap(map, data);
@@ -51,6 +55,10 @@ $( document ).ready(function() {
         }
         group = populateMap(map, data);
       });
+      //example of getting data from datasets joined with this one
+      $.getJSON('/get_joined_dataset/' + getTableFromURL() + '/' + target_page + '/', function(data) {
+        //window.alert(JSON.stringify(data));
+      });
       //Get table data from get request in url
       $.getJSON('/get_dataset_page/' + getTableFromURL() + '/' + target_page + '/', function(data) {
         insertDatasetPage(data, target_page);
@@ -77,16 +85,16 @@ $( document ).ready(function() {
     pageCount = Number(pageCount);
     //Selected page
     selected = Number(selected);
-	
+
     //-----Build pagination bar-----
-	
+
 	//Settings
 	var pad = 4; //The number of page numbers shown between the start/end of the list and the elipses during truncation
 	var buttons = 19; //Total number of page number buttons + elipses. Should be an odd number
-	
+
     //Add 'Previous' Button
     parentElement.append($('<a id="previousPage" class="item">Previous</a>'));
-	
+
     //Add page numbers
 	if(pageCount < buttons) //If all numbers can fit with no truncation (elipses)
 	{
@@ -119,7 +127,7 @@ $( document ).ready(function() {
 				}
 			}
 			//At the place where the second (...) would go, if this second truncation is necessary to reach the last page
-			else if(b == buttons-pad-1 && selected < pageCount-(buttons-1)/2  && index !== pageCount-pad) 
+			else if(b == buttons-pad-1 && selected < pageCount-(buttons-1)/2  && index !== pageCount-pad)
 			{
 				parentElement.append($('<div class="disabled item">...</div>')); //Add the elipses
 				index = pageCount-(pad-1); //Set index to count to the final page for the last button
@@ -136,11 +144,11 @@ $( document ).ready(function() {
 			}
 		}
 	}
-	
+
 	//Add 'Next' Button
     parentElement.append('<a id="nextPage" class="item">Next</a>');
   }
-  
+
   //Initialize map
   function initMap(map, data) {
     // .setView([data['lat'], data['lon']], 13)
