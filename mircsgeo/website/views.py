@@ -12,7 +12,7 @@ import json
 import math
 
 import website.models as m
-from .forms import Uploadfile, AddDatasetKey
+from .forms import Uploadfile, AddDatasetKey, SearchData
 
 import pandas as pd
 
@@ -24,7 +24,7 @@ import datetime
 import website.table_generator as table_generator
 
 schema = "mircs"
-
+import logging
 
 def home(request):
     """
@@ -221,22 +221,109 @@ def view_dataset(request, table):
         m.DATASETS.uuid == table
     ).one()[0])  # This returns a list containing a single element(original_filename)
                  # The [0] gets the filename out of the list
-    session.close
-
-    db = Session().connection()
-    # Get the first 100 rows of data out of the database for the requested dataset
-    df = pd.read_sql("SELECT * FROM " + schema + ".\"" + table + "\" LIMIT 100",
-                     db, params={'schema': schema, 'table': table})
-    columns = df.columns.tolist()
-    rows = convert_nans(df.values.tolist())
 
     # Render the view dataset page
     return render(request, 'view_dataset.html', {
-        'dataset': rows,
-        'columns': columns,
-        'tablename': file_name,
+        'tablename': file_name
     })
+	
+def search_dataset(request, table):
+    if request.method == 'POST':
+        post_data = dict(request.POST)
+        columnName = post_data['columnName'][0]
+        queryString = post_data['queryString'][0]
+        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+        logging.debug(columnName)
+        logging.debug(queryString)
 
+        return render(request, 'view_dataset_query.html', {
+            'columnName': columnName,
+            'queryString': queryString
+        })
+    else:
+        # Get the columns in the table and add them to the dropdown in the form
+        columns = [str(x).split('.')[1] for x in getattr(m.Base.classes, table).__table__.columns]
+        form = SearchData(zip(columns, columns))
+        # Return the form
+        return render(request, 'search_dataset.html', {'form': form})
+	
+def get_dataset_query(request, table, columnName, queryString):
+    # Get a session
+    session = m.get_session()
+
+    # Get the object for the table we're working with
+    table = getattr(m.Base.classes, table)
+
+    # Query the table
+    query = session.query(
+        table
+    ).filter(
+        #getattr(table, columnName) == queryString
+        getattr(table, columnName).ilike("%"+queryString+"%")
+    )
+
+    # Get a DataFrame with the results of the query
+    df = pd.read_sql(query.statement, query.session.bind)
+
+    # Convert everything to the correct formats for displaying
+    columns = df.columns.tolist()
+    rows = df.values.tolist()
+    rows = convert_nans(rows)
+    median_lat = df.LATITUDE.median()
+    median_lon = df.LONGITUDE.median()
+
+    return JsonResponse({
+        'columns': columns,
+        'rows': rows,
+        'lat': median_lat,
+        'lon': median_lon
+    })
+	
+def get_query_geojson(request, table, columnName, queryString):
+    """
+    Returns geojson created from the geospatial columns of query
+    """
+
+    # Get a session
+    session = m.get_session()
+
+    t = getattr(m.Base.classes, table)
+
+    # Get geospatial columns
+    geo = m.GEOSPATIAL_COLUMNS
+    geospatial_columns = session.query(geo.column).filter(geo.dataset_uuid == table).all()
+    geo_column_objects = []
+    geo_column_names = []
+    # Create the geospatial object from the columns
+    for col in geospatial_columns:
+        geo_column_objects.append(geofunc.ST_AsGeoJSON(getattr(t, col[0])))
+        geo_column_names.append(col[0])
+
+    # build up geospatial select functions
+    # Note: we're just grabbing the first geospatial column right now. it is explicitly labeled 'geometry'
+    #       a picker for geo columns might be desirable someday
+    geojson = session.query(t, geo_column_objects[0].label('geometry')).filter(
+        getattr(t, columnName).ilike("%"+queryString+"%")
+        #getattr(t, columnName) == queryString
+    )
+    # Get a DataFrame with the results of the query
+    data = pd.read_sql(geojson.statement, geojson.session.bind)
+    geo_column_names.append('geometry')
+
+    # Build some properly formatted geojson to pass into leaflet
+    geojson = []
+    for i, r in data.iterrows():
+        # Geometry and properties are both required for a 'Feature' object.
+        geometry = r['geometry']
+        properties = r.drop(geo_column_names).to_dict()
+        geojson.append({
+            'type': 'Feature',
+            'properties': properties,
+            'geometry': json.loads(geometry),
+            'keys': sorted(properties.keys())
+        })
+    return JsonResponse(geojson, safe=False)
+    
 
 def manage_dataset(request, table):
     """
@@ -730,9 +817,11 @@ def get_pagination_id_range(table, page_number):
         int(page_number) * settings.DATASET_ITEMS_PER_PAGE,
         (int(page_number) + 1) * settings.DATASET_ITEMS_PER_PAGE
     )
+	
     session.close()
-
     return id_range, page_count
+	
+	
 
 def create_df_from_upload(request):
     # Get the POST data
