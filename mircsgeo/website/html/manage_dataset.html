@@ -18,10 +18,11 @@
         <div class="twelve wide column">
            <div class="ui medium header">pick action to perform</div>
              <form class="ui form" onsubmit="var sel = this.getElementsByTagName('select')[0]; window.location = sel.options[sel.selectedIndex].value;return false;">
-                <div class="field"">
-                 <select name="select action">
+                <div class="field">
+                 <select class="ui dropdown" name="select action">
                     <option value="/manage/update/{{table}}">Update Data</option>
                     <option value="/manage/append/{{table}}">Append Data</option>
+                    <option value="/manage/append_column/{{table}}">Append Column</option>
                     <option value="/add_dataset_key/{{table}}">Add Data Key For Join</option>
                     <option value="/manage/join/{{table}}">Join Data</option>
                  </select>

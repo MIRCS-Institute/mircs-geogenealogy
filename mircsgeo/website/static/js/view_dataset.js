@@ -8,6 +8,10 @@ $( document ).ready(function() {
     insertDatasetPage(data, 0);
     initMap(map, data);
   });
+  //example of getting data from datasets joined with this one
+  $.getJSON('/get_joined_dataset/' + getTableFromURL() + '/0/', function(data) {
+    //window.alert(JSON.stringify(data));
+  });
   //Populate map with json data
   $.getJSON('/get_dataset_geojson/' + getTableFromURL() + '/0/', function(data) {
     group = populateMap(map, data);
@@ -50,6 +54,10 @@ $( document ).ready(function() {
           group.clearLayers();
         }
         group = populateMap(map, data);
+      });
+      //example of getting data from datasets joined with this one
+      $.getJSON('/get_joined_dataset/' + getTableFromURL() + '/' + target_page + '/', function(data) {
+        //window.alert(JSON.stringify(data));
       });
       //Get table data from get request in url
       $.getJSON('/get_dataset_page/' + getTableFromURL() + '/' + target_page + '/', function(data) {

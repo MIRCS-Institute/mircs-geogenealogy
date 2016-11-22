@@ -5,8 +5,7 @@
 {% block externalLibraries %}
 <link rel="stylesheet" href="{% static 'css/upload_file.css' %}">
 <script src="{% static 'js/createTable.js' %}"></script>
-<!--will have to change following line if we need javascript or delete if we don't-->
-<script src="{% static 'js/append_file.js' %}"></script>
+<script src="{% static 'js/update_dataset.js' %}"></script>
 {% endblock %}
 
 {% block title %}Update Data{% endblock %}
@@ -34,19 +33,50 @@
         <div id='primaryKeyPicker' style="display:none;">
           <form id='fileUploadForm' enctype='multipart/form-data' class="ui form" method="POST" action="/manage/update/{{ table }}">
             {% csrf_token %}
+            <h3 class="ui header">Search Options</h3>
+            <div class="required field">
+              <label>Unique Key</label>
+              <p>
+                Create a unique key of columns to use to search for the row to
+                update. A key can be imported from the keys for the dataset. A
+                key can be saved to the dataset's keys.
+              </p>
+              <select id="unique_key" multiple="" name="key" class="ui dropdown">
+              </select>
+            </div>
+            <div class="field">
+              <input id="import" class="ui button blue" type="button" value="Import key" />
+              <input id="save" class="ui button blue" type="button" value="Save key" />
+            </div>
+            <h3 class="ui header">Dataset</h3>
 
-          <h3 class="ui header">Dataset</h3>
+            <table id='uploadedDataTable' class="ui celled striped table stackable">
+            </table>
 
-          <table id='uploadedDataTable' class="ui celled striped table stackable">
-          </table>
-
-          <div class="field">
-            <input class="ui button green" type="submit" value="Submit"/>
-          </div>
+            <div class="field">
+              <input class="ui button green" type="submit" value="Submit" disabled/>
+            </div>
           </form>
         </div>
         <div id='uploadConfirmation'></div>
       </div>
+    </div>
+  </div>
+</div>
+<div class="ui modal import">
+  <div class="ui form">
+    <h2>Import key from dataset</h2>
+    <div class="field">
+      <label>Keys:</label>
+      <select id="key">
+      {% for key in keys %}
+        <option value="{{ key.columns }}">{{ key.index }}</option>
+      {% endfor %}
+      </select>
+    </div>
+    <br>
+    <div class="field">
+      <button id="submit_import" class="ui green button">Import Key</button>
     </div>
   </div>
 </div>
