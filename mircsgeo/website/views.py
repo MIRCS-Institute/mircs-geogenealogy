@@ -110,7 +110,7 @@ def store_file(request):
             possible_datatypes = table_generator.type_mappings.values()
 
             # Convert np.NaN objects to 'null' so rows is JSON serializable
-            rows = convert_nans(rows)
+            rows = table_generator.convert_nans(rows)
 
             return JsonResponse({
                 'columns': columns,
@@ -230,7 +230,7 @@ def view_dataset(request, table):
     df = pd.read_sql("SELECT * FROM " + schema + ".\"" + table + "\" LIMIT 100",
                      db, params={'schema': schema, 'table': table})
     columns = df.columns.tolist()
-    rows = convert_nans(df.values.tolist())
+    rows = table_generator.convert_nans(df.values.tolist())
 
     # Render the view dataset page
     return render(request, 'view_dataset.html', {
@@ -528,7 +528,7 @@ def get_dataset_page(request, table, page_number):
     # Convert everything to the correct formats for displaying
     columns = df.columns.tolist()
     rows = df.values.tolist()
-    rows = convert_nans(rows)
+    rows = table_generator.convert_nans(rows)
     median_lat = df.LATITUDE.median()
     median_lon = df.LONGITUDE.median()
 
@@ -820,20 +820,6 @@ def convert_time_columns(df, datetime_identifiers=['time', 'date']):
             if d in c.lower():
                 df[c] = pd.to_datetime(df[c])
     return df
-
-
-def convert_nans(rows):
-    """
-    Convert np.NaN objects to 'null' so rows is JSON serializable
-    """
-    for row in rows:
-        for i, e in enumerate(row):
-            try:
-                if pd.isnull(e):
-                    row[i] = 'null'
-            except TypeError as err:
-                row[i] = str(e)
-    return rows
 
 
 def get_pagination_id_range(table, page_number):

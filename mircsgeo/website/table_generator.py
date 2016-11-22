@@ -105,34 +105,39 @@ def insert_column(df,datatypes, table):
     df.columns = df.columns.str.replace(')','&#41')
     columnList = df.columns.values.tolist()
     newCol = columnList[len(columnList)-1]
-    columnList = columnList[:len(columnList)-1]
+    columnList = columnList[:len(columnList)]
     table = getattr(m.Base.classes, table)
 
     #add the column
     add_column_to_table(table.__name__,newCol,datatypes[len(datatypes)-1])
 
-    #for every row in the dataframe
-    for row in df.itertuples():
-        matchString=""
+    rows = convert_nans(df.values.tolist())
 
+    sql = "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '%s' AND (" % table.__name__
+    for col in columnList:
+        sql = "%scolumn_name = '%s' OR " % (sql, col)
+    # Remove the last OR and spaces and end the parantheses
+    sql = "%s);" % sql[:-4]
+    col_types = m.engine.execute(sql).fetchall();
+    col_types = dict((x, y) for x, y in col_types)
+
+    #for every row in the dataframe
+    for row in rows:
+        matchString=""
         #get the parameters to match on
         for col in columnList:
-            sql="SELECT data_type FROM information_schema.columns WHERE table_name = '%s' AND column_name ='%s'" % (table.__name__,col)
-            typeSql = m.engine.execute(sql)
-            for k in typeSql:
-                dt = k[0]
-            if dt == 'character varying':
-                matchString = "%s \"%s\"='%s' AND" % (matchString,col,row[columnList.index(col)+1])
+            dt = col_types[col]
+            if row[columnList.index(col)] == 'null':
+                matchString = "%s \"%s\"=%s AND" % (matchString,col,row[columnList.index(col)])
+            elif dt == 'character varying' or dt == 'timestamp without time zone':
+                matchString = "%s \"%s\"='%s' AND" % (matchString,col,row[columnList.index(col)])
             else:
-                matchString = "%s \"%s\"=%s AND" % (matchString,col,row[columnList.index(col)+1])
+                matchString = "%s \"%s\"=%s AND" % (matchString,col,row[columnList.index(col)])
 
         #add the entry for the new row based on the matchstring
         matchString = matchString[:len(matchString)-3]
-        sql="SELECT data_type FROM information_schema.columns WHERE table_name = '%s' AND column_name ='%s'" % (table.__name__,col)
-        typeSql = m.engine.execute(sql)
-        for k in typeSql:
-            dt = k[0]
-        if dt == 'character varying':
+        dt = col_types[col]
+        if dt == 'character varying' or dt == 'timestamp without time zone':
             sql = "UPDATE mircs.\"%s\" SET \"%s\"='%s' WHERE %s" % (table.__name__,newCol,row[len(row)-1],matchString)
         else:
             sql = "UPDATE mircs.\"%s\" SET \"%s\"=%s WHERE %s" % (table.__name__,newCol,row[len(row)-1],matchString)
@@ -141,6 +146,7 @@ def insert_column(df,datatypes, table):
     #get return value i.e. max id of rows affected (used fr transaction table entry)
     sql = "SELECT MAX(id) FROM mircs.\"%s\"" % (table.__name__,)
     res = m.engine.execute(sql)
+    m.refresh()
     for k in res:
         ret = k[0]
     return ret
@@ -181,14 +187,14 @@ def insert_df(df, table, geospatial_columns=None):
         insert_dict
     )
     return
-def add_column_to_table(table, column_name,py_datatype):
+def add_column_to_table(table, column_name, py_datatype):
     psql_types = {
         'integer': "integer",
         'float': "decimal",
         'datetime': "DateTime",
         'string': "text"
     }
-    sql = "ALTER TABLE mircs.\"%s\" ADD COLUMN \"%s\" %s" % (table.__name__,column_name, psql_types[py_datatype])
+    sql = "ALTER TABLE mircs.\"%s\" ADD COLUMN \"%s\" %s" % (table, column_name, psql_types[py_datatype])
     m.engine.execute(sql)
     m.refresh()
 
@@ -395,3 +401,17 @@ def truncate_table(table):
     session.add(transaction)
     session.commit()
     session.close()
+
+
+def convert_nans(rows):
+    """
+    Convert np.NaN objects to 'null' so rows is JSON serializable
+    """
+    for row in rows:
+        for i, e in enumerate(row):
+            try:
+                if pd.isnull(e):
+                    row[i] = 'null'
+            except TypeError as err:
+                row[i] = str(e)
+    return rows
