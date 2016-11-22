@@ -353,6 +353,7 @@ def append_dataset(request, table, flush=False):
             'form': form,
             'table': table
         })
+
 def update_dataset(request, table):
     """
     update  dataset to existing table
