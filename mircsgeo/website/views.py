@@ -872,7 +872,7 @@ def download_dataset(request, table):
     #Content-Disposition tells browser name of file to be downloaded
     response['Content-Disposition'] = 'attachment; filename = export_%s'%file_name
     #convert dataframe to csv
-    df.to_csv(response)
+    df.to_csv(response, index=False)
 
     return response
 
