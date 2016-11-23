@@ -25,7 +25,6 @@ import datetime
 import website.table_generator as table_generator
 
 schema = "mircs"
-#import logging
 
 def home(request):
     """
@@ -234,9 +233,6 @@ def search_dataset(request, table):
         post_data = dict(request.POST)
         columnName = post_data['columnName'][0]
         queryString = post_data['queryString'][0]
-        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-        logging.debug(columnName)
-        logging.debug(queryString)
 
         return render(request, 'view_dataset_query.html', {
             'columnName': columnName,
@@ -269,8 +265,7 @@ def get_dataset_query(request, table, columnName, queryString):
 
     # Convert everything to the correct formats for displaying
     columns = df.columns.tolist()
-    rows = df.values.tolist()
-    rows = convert_nans(rows)
+    rows = table_generator.convert_nans(df.values.tolist())
     median_lat = df.LATITUDE.median()
     median_lon = df.LONGITUDE.median()
 
@@ -615,8 +610,7 @@ def get_dataset_page(request, table, page_number):
 
     # Convert everything to the correct formats for displaying
     columns = df.columns.tolist()
-    rows = df.values.tolist()
-    rows = table_generator.convert_nans(rows)
+    rows = table_generator.convert_nans(df.values.tolist())
     median_lat = df.LATITUDE.median()
     median_lon = df.LONGITUDE.median()
 
@@ -627,10 +621,6 @@ def get_dataset_page(request, table, page_number):
         'lat': median_lat,
         'lon': median_lon
     })
-
-def get_joined_dataset(request,table,page_number):
-    """
-    get joined data for specific page of dataset
 
 def get_joined_dataset(request,table,page_number):
     """
