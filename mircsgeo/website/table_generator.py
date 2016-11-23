@@ -42,7 +42,14 @@ def to_sql(df, datatypes, table_name, schema, geospatial_columns=None):
     Returns:
     table - The SQLAlchemy table object that was generated
     """
+    #replace parantheses in column names with their html numbers
+    #might have to do this for every entry in dataframe but haven't
+    #come across case where that was needed
+    df.columns = df.columns.str.replace('(','&#40')
+    df.columns = df.columns.str.replace(')','&#41')
+
     create_table(df, datatypes, table_name, schema, geospatial_columns)
+    print geospatial_columns
     table = getattr(m.Base.classes, table_name)
     insert_df(df, table, geospatial_columns)
     return table
@@ -66,6 +73,8 @@ def create_table(df, datatypes, table_name, schema, geospatial_columns=None):
     datatypes = get_alchemy_types(datatypes)
     columns = [Column('id', Integer, primary_key=True)]
     for i, c in enumerate(df.columns):
+        print i
+        print c
         columns.append(
             Column(c, datatypes[i])
         )
@@ -91,45 +100,44 @@ def insert_column(df,datatypes, table):
     returns:
     max id of rows affected
     """
-    #define conversion between python types and psql types
-    psql_types = {
-        'integer': 'integer',
-        'float': 'decimal',
-        'datetime': 'DateTime',
-        'string': 'text'
-    }
     #prepare variables
+    df.columns = df.columns.str.replace('(','&#40')
+    df.columns = df.columns.str.replace(')','&#41')
     columnList = df.columns.values.tolist()
     newCol = columnList[len(columnList)-1]
-    columnList = columnList[:len(columnList)-1]
+    columnList = columnList[:len(columnList)]
     table = getattr(m.Base.classes, table)
 
     #add the column
-    sql = "ALTER TABLE mircs.\"%s\" ADD COLUMN \"%s\" %s" % (table.__name__,newCol, psql_types[datatypes[len(datatypes)-1]])
-    m.engine.execute(sql)
+    add_column_to_table(table.__name__,newCol,datatypes[len(datatypes)-1])
+
+    rows = convert_nans(df.values.tolist())
+
+    sql = "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '%s' AND (" % table.__name__
+    for col in columnList:
+        sql = "%scolumn_name = '%s' OR " % (sql, col)
+    # Remove the last OR and spaces and end the parantheses
+    sql = "%s);" % sql[:-4]
+    col_types = m.engine.execute(sql).fetchall();
+    col_types = dict((x, y) for x, y in col_types)
 
     #for every row in the dataframe
-    for row in df.itertuples():
+    for row in rows:
         matchString=""
-
         #get the parameters to match on
         for col in columnList:
-            sql="SELECT data_type FROM information_schema.columns WHERE table_name = '%s' AND column_name ='%s'" % (table.__name__,col)
-            typeSql = m.engine.execute(sql)
-            for k in typeSql:
-                dt = k[0]
-            if dt == 'character varying':
-                matchString = "%s \"%s\"='%s' AND" % (matchString,col,row[columnList.index(col)+1])
+            dt = col_types[col]
+            if row[columnList.index(col)] == 'null':
+                matchString = "%s \"%s\"=%s AND" % (matchString,col,row[columnList.index(col)])
+            elif dt == 'character varying' or dt == 'timestamp without time zone':
+                matchString = "%s \"%s\"='%s' AND" % (matchString,col,row[columnList.index(col)])
             else:
-                matchString = "%s \"%s\"=%s AND" % (matchString,col,row[columnList.index(col)+1])
+                matchString = "%s \"%s\"=%s AND" % (matchString,col,row[columnList.index(col)])
 
         #add the entry for the new row based on the matchstring
         matchString = matchString[:len(matchString)-3]
-        sql="SELECT data_type FROM information_schema.columns WHERE table_name = '%s' AND column_name ='%s'" % (table.__name__,col)
-        typeSql = m.engine.execute(sql)
-        for k in typeSql:
-            dt = k[0]
-        if dt == 'character varying':
+        dt = col_types[col]
+        if dt == 'character varying' or dt == 'timestamp without time zone':
             sql = "UPDATE mircs.\"%s\" SET \"%s\"='%s' WHERE %s" % (table.__name__,newCol,row[len(row)-1],matchString)
         else:
             sql = "UPDATE mircs.\"%s\" SET \"%s\"=%s WHERE %s" % (table.__name__,newCol,row[len(row)-1],matchString)
@@ -138,6 +146,7 @@ def insert_column(df,datatypes, table):
     #get return value i.e. max id of rows affected (used fr transaction table entry)
     sql = "SELECT MAX(id) FROM mircs.\"%s\"" % (table.__name__,)
     res = m.engine.execute(sql)
+    m.refresh()
     for k in res:
         ret = k[0]
     return ret
@@ -154,8 +163,18 @@ def insert_df(df, table, geospatial_columns=None):
     Returns:
     Nothing
     """
+    df.columns = df.columns.str.replace('(','&#40')
+    df.columns = df.columns.str.replace(')','&#41')
+    columnList = df.columns.values.tolist()
+    datatypes = get_readable_types_from_dataframe(df)
+    for col in columnList:
+        print col
+        #sql="SELECT EXISTS(SELECT column_name FROM information_schema.columns WHERE table_name='%s' and column_name='%s')" % (table.__name__,col)
+        res = m.engine.execute("SELECT EXISTS(SELECT column_name FROM information_schema.columns WHERE table_name=%s and column_name=%s)",(table.__name__,col))
+        for k in res:
+            if k[0] != True:
+                add_column_to_table(table,col,datatypes[len(datatypes)-1])
     insert_dict = df.to_dict('records')
-
     for row in insert_dict:
         for c in row:
             if pd.isnull(row[c]):
@@ -163,13 +182,21 @@ def insert_df(df, table, geospatial_columns=None):
         if geospatial_columns is not None:
             for c in geospatial_columns:
                 row[c['name']] = 'SRID=%s;POINT(%s %s)' % (c['srid'], row[c['lon_col']], row[c['lat_col']])
-
     m.engine.execute(
         table.__table__.insert(),
         insert_dict
     )
     return
-
+def add_column_to_table(table, column_name, py_datatype):
+    psql_types = {
+        'integer': "integer",
+        'float': "decimal",
+        'datetime': "DateTime",
+        'string': "text"
+    }
+    sql = "ALTER TABLE mircs.\"%s\" ADD COLUMN \"%s\" %s" % (table, column_name, psql_types[py_datatype])
+    m.engine.execute(sql)
+    m.refresh()
 
 def get_geospatial_columns(table_uuid):
     """
@@ -277,7 +304,7 @@ def convert_type(dtype):
             return type_mappings[t]
     return None
 
-def update_dataset(df, table, confidence, ignored_cols=[]):
+def update_dataset(df, table, key):
     """
     Takes a dataframe of changes to be made to the data and updates the proper
     rows using a given confidence value.
@@ -285,42 +312,27 @@ def update_dataset(df, table, confidence, ignored_cols=[]):
     Parameters:
     df (pandas.DataFrame) - The dataframe with the proper row values
     table (str) - The name of the table that being updated
-    confidence (int) - number of columns need to match before the row's updated.
-    ignored_cols (list) -   A list of the columns that the user doesn't want to
-                            be included when checking confidence
+    key (list) -   The names of the columns that make up the key
 
     Returns:
     Nothing
     """
     num_col = len(df.columns) # Gets the numbers of columns
     orm = getattr(m.Base.classes, table) # Gets the mapper for the table
-    usable_cols = [x for x in df.columns if x not in ignored_cols]
     for index, row in df.iterrows():
         query = 'SELECT * FROM mircs."%s" WHERE ' % table
-        num_of_ors = num_col - confidence - len(ignored_cols)
-        print (num_of_ors, num_col, confidence, len(ignored_cols), ignored_cols)
-        for i in range(num_of_ors):
-            col = usable_cols[i]
+        for i in range(len(key)):
+            col = key[i].replace(' ', '_')
             query += '"%s"=\'%s\' ' % (col, getattr(row, col))
-            if i != num_of_ors - 1:
-                query += 'OR '
+            if i != len(key) - 1:
+                query += 'AND '
             else:
                 query += ';'
         df_sql = pd.read_sql(query, m.engine)
-        best = (None, 0)
-        extras = [] # Hold all rows that have the same number of matches as best
-        for r_i, r_row in df_sql.iterrows():
-            count = 0
-            for col in usable_cols:
-                if row[col] == r_row[col]:
-                    count += 1
-            if count > best[1] and count >= confidence:
-                extras = []
-                best = (r_i, count)
-            elif count == best[1] and count > 0:
-                extras.append((r_i))
-        if len(extras) == 0 and best[0] is not None:
-            r_row = df_sql.loc[best[0]].to_dict()
+        print df_sql.id.count()
+        if df_sql.id.count() == 1:
+
+            r_row = df_sql.iloc[0].to_dict()
             for col in df.columns:
                 r_row[col] = row[col]
             # It is possible that the geospatial columns were modified. The
@@ -389,3 +401,17 @@ def truncate_table(table):
     session.add(transaction)
     session.commit()
     session.close()
+
+
+def convert_nans(rows):
+    """
+    Convert np.NaN objects to 'null' so rows is JSON serializable
+    """
+    for row in rows:
+        for i, e in enumerate(row):
+            try:
+                if pd.isnull(e):
+                    row[i] = 'null'
+            except TypeError as err:
+                row[i] = str(e)
+    return rows

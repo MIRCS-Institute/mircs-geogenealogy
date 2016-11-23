@@ -19,10 +19,11 @@
     </div>
 
     {% for t in tables %}
-        <div class="sixteen wide column">
-          <a href="/view/{{t.uuid}}">{{ t.original_filename }} - {{ t.upload_date }}</a>
-          <a class='ui green basic button' href="/view/{{t.uuid}}">View</a>
-          <a class='ui orange basic button' href="/manage/{{t.uuid}}">Edit</a>
+        <div class="ui grid">
+          <div class="ten wide column"><a href="/view/{{t.uuid}}">{{ t.original_filename }} - {{ t.upload_date }}</a></div>
+          <div class="two wide column"><a class='ui green basic button' href="/view/{{t.uuid}}">View</a></div>
+          <div class="two wide column"><a class='ui orange basic button' href="/manage/{{t.uuid}}">Edit</a></div>
+          <div class="two wide column"><a class='ui blue basic button' href="/download/{{t.uuid}}">Download</a></div>
         </div>
     {% endfor %}
 

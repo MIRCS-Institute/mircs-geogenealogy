@@ -541,7 +541,6 @@ def add_dataset_key(request, table):
 
         # Get the table
         t = getattr(m.Base.classes, table)
-
         # Get the column objects for each selected column in the POST parameter
         column_objects = []
         for col in dataset_columns:
@@ -629,6 +628,9 @@ def get_dataset_page(request, table, page_number):
         'lon': median_lon
     })
 
+def get_joined_dataset(request,table,page_number):
+    """
+    get joined data for specific page of dataset
 
 def get_joined_dataset(request,table,page_number):
     """
