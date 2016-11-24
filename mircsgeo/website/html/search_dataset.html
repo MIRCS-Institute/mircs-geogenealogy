@@ -1,0 +1,22 @@
+<!-- Presenting the interface to add keys to the dataset-->
+{% extends "base.html" %}
+{% load staticfiles %}
+
+{% block externalLibraries %}
+<script src="{% static 'js/search_dataset.js' %}"></script>
+{% endblock %}
+
+{% block title %}MIRCS Geo-Genealogy{% endblock %}
+
+{% block content %}
+<div class="ui container">
+  <h1>Search Dataset</h1>
+  <form method='post' class="ui form">
+    {% csrf_token %}
+    <div class="field">
+      {{ form }}
+    </div>
+    <input id='submit_dataset_query' class="ui button green" type="submit" value="Submit"/>
+  </form>
+</div>
+{% endblock %}
