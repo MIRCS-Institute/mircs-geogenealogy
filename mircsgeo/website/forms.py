@@ -10,11 +10,14 @@ class AddDatasetKey(forms.Form):
         self.dataset_columns = dataset_columns
         super(AddDatasetKey, self).__init__(*args, **kwargs)
         self.fields['dataset_columns'].choices = self.dataset_columns
-
+    dataset_key_name = forms.CharField(
+        label='Dataset Key Name:',
+        widget=forms.TextInput(attrs={'class' : 'ui input required', 'required': ''})
+    )
     dataset_columns = forms.MultipleChoiceField(
         label='Dataset Columns:',
         choices=[],
-        widget=forms.SelectMultiple(attrs={'class': 'ui fluid dropdown'})
+        widget=forms.SelectMultiple(attrs={'class': 'ui fluid dropdown', 'required': ''})
     )
 
 class SearchData(forms.Form):

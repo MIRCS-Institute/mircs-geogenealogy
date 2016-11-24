@@ -227,7 +227,7 @@ def view_dataset(request, table):
     return render(request, 'view_dataset.html', {
         'tablename': file_name
     })
-	
+
 def search_dataset(request, table):
     if request.method == 'POST':
         post_data = dict(request.POST)
@@ -244,7 +244,7 @@ def search_dataset(request, table):
         form = SearchData(zip(columns, columns))
         # Return the form
         return render(request, 'search_dataset.html', {'form': form})
-	
+
 def get_dataset_query(request, table, columnName, queryString):
     # Get a session
     session = m.get_session()
@@ -275,7 +275,7 @@ def get_dataset_query(request, table, columnName, queryString):
         'lat': median_lat,
         'lon': median_lon
     })
-	
+
 def get_query_geojson(request, table, columnName, queryString):
     """
     Returns geojson created from the geospatial columns of query
@@ -320,7 +320,7 @@ def get_query_geojson(request, table, columnName, queryString):
             'keys': sorted(properties.keys())
         })
     return JsonResponse(geojson, safe=False)
-    
+
 
 def manage_dataset(request, table):
     """
@@ -487,11 +487,11 @@ def append_dataset(request, table, flush=False):
             'form': form,
             'table': table
         })
-		
+
 def update_dataset(request, table):
     """
     update  dataset to existing table
-	
+
     Parameters:
     table (str) - the name of the table to be displayed. This should be a UUID
     """
@@ -532,7 +532,9 @@ def add_dataset_key(request, table):
     if request.method == 'POST':
         # Get the POST parameter
         post_data = dict(request.POST)
-        dataset_columns = post_data['dataset_columns[]']
+
+        key_name = post_data['dataset_key_name'][0]
+        dataset_columns = post_data['dataset_columns']
 
         # Get the table
         t = getattr(m.Base.classes, table)
@@ -542,10 +544,7 @@ def add_dataset_key(request, table):
             column_objects.append(getattr(t.__table__.columns, col))
 
         # Build up a standard name for the index
-        index_name = '%s_' % table
-        for col in dataset_columns:
-            index_name += '%s_' % col
-        index_name += 'idx'
+        index_name = key_name
 
         # Create an sqlalchemy Index object
         index = Index(index_name, *column_objects)
@@ -569,6 +568,7 @@ def add_dataset_key(request, table):
         columns = [str(x).split('.')[1] for x in getattr(m.Base.classes, table).__table__.columns]
         form = AddDatasetKey(zip(columns, columns))
         # Return the form
+
         return render(request, 'add_dataset_key.html', {'form': form})
 
 
@@ -934,7 +934,7 @@ def get_pagination_id_range(table, page_number):
         int(page_number) * settings.DATASET_ITEMS_PER_PAGE,
         (int(page_number) + 1) * settings.DATASET_ITEMS_PER_PAGE
     )
-	
+
     session.close()
     return id_range, page_count
 

@@ -13,9 +13,12 @@
   <h1>Add Dataset Key</h1>
   <form method='post' class="ui form">
     {% csrf_token %}
-    <div class="field">
-      {{ form }}
-    </div>
+    {% for f in form %}
+      <div class="field required">
+        {{ f.label_tag }}
+        {{ f }}
+      </div>
+    {% endfor %}
     <input id='submit_dataset_columns' class="ui button green" type="submit" value="Submit"/>
   </form>
 </div>
