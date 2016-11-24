@@ -329,7 +329,7 @@ def update_dataset(df, table, key):
             else:
                 query += ';'
         df_sql = pd.read_sql(query, m.engine)
-        print df_sql.id.count()
+
         if df_sql.id.count() == 1:
 
             r_row = df_sql.iloc[0].to_dict()
@@ -370,7 +370,18 @@ def update_dataset(df, table, key):
                 raise
             finally:
                 session.close()
-
+        elif df_sql.id.count() == 0:
+            instance = orm()
+            for col in df.columns:
+                setattr(instance, col, row[col])
+            session = m.get_session()
+            try:
+                session.add(instance)
+                session.commit()
+            except:
+                raise
+            finally:
+                session.close()
 def truncate_table(table):
     """
     Truncates the table.
