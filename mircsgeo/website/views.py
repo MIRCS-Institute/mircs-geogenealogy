@@ -423,13 +423,12 @@ def append_column(request, table):
             'table': table
         })
 
-def append_dataset(request, table, flush=False):
+def append_dataset(request, table):
     """
     Append dataset to existing table
 
     Parameters:
     table (str) - the name of the table to be displayed. This should be a UUID
-    flush (bool) - if True, it truncates the table first (Default: False)
     """
     # If it is POST append the dataset
     if request.method == 'POST':
@@ -450,14 +449,6 @@ def append_dataset(request, table, flush=False):
 
         geospatial_columns = table_generator.get_geospatial_columns(table_uuid)
         print geospatial_columns
-
-        if flush:
-            table_generator.truncate_table(table)
-
-
-        if flush:
-            table_generator.truncate_table(table)
-
 
         # Append the to the table with a batch insert
         table_generator.insert_df(df, table, geospatial_columns)

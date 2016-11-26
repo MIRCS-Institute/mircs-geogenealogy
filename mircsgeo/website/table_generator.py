@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import datetime, time
 
 from sqlalchemy import create_engine, MetaData, Table, Column, Integer, \
                        String, Float, DateTime, ForeignKeyConstraint, ForeignKey,\
@@ -319,6 +320,8 @@ def update_dataset(df, table, key):
     """
     num_col = len(df.columns) # Gets the numbers of columns
     orm = getattr(m.Base.classes, table) # Gets the mapper for the table
+
+    new_rows = df.copy()[df.index == -1]
     for index, row in df.iterrows():
         query = 'SELECT * FROM mircs."%s" WHERE ' % table
         for i in range(len(key)):
@@ -358,7 +361,7 @@ def update_dataset(df, table, key):
                 (col_dict['srid'], r_row[col_dict['lon_col']], r_row[col_dict['lat_col']])
             session = m.get_session()
             try:
-                query = 'UPDATE mircs.%s SET ' % table
+                query = 'UPDATE mircs."%s" SET ' % table
                 for k, v in row.to_dict().items():
                     query += '"%s" = \'%s\', ' % (k, v)
                 query = query[:len(query) - 2]
@@ -371,20 +374,23 @@ def update_dataset(df, table, key):
             finally:
                 session.close()
         elif df_sql.id.count() == 0:
-            instance = orm()
-            for col in df.columns:
-                setattr(instance, col, row[col])
-            session = m.get_session()
-            try:
-                session.add(instance)
-                session.commit()
-            except:
-                raise
-            finally:
-                session.close()
+            for col, v in row.iteritems():
+                c = row[col]
+                if type(c) == pd.tslib.Timestamp:
+                    unixtime = time.mktime(c.to_pydatetime().timetuple())
+                    # row[col] = int(unixtime)
+            list_dict = new_rows.T.to_dict().values()
+            list_dict.append(row)
+            new_rows = pd.DataFrame(list_dict)
+
+
+    geospatial_columns = get_geospatial_columns(table)
+    insert_df(new_rows, orm, geospatial_columns)
+
+
 def truncate_table(table):
     """
-    Truncates the table.
+    Truncates the table. Legacy function, but could be useful down the road.
 
     Parameters:
     table_name (str) - the name of the table to truncate
