@@ -70,7 +70,5 @@ function viewRowModal(dataRow, columns)
         left += "<font color='purple'>" + columns[i] + "</font>"+ "<br/>";
         right += dataRow[i] +"<br/>";
 	}
-	document.getElementById('l').innerHTML = left;
-	document.getElementById('r').innerHTML = right;
-	$('.ui.modal').modal('show');
+	myFunction(left, right);
 }

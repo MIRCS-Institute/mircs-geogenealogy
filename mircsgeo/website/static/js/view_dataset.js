@@ -193,7 +193,7 @@ $( document ).ready(function() {
         left += "<font color='purple' class='label'>" + val + "</font><br/>";
         right += "<font class='values'>"+feature.properties[val] +"</font><br/>";
       });
-      left+="<div><input class='ui button blue' type='button' value='view joined data entry' onClick= 'viewJoinedInfo(getTableFromURL())'></div>"
+      left+="<div><input class='ui button blue' type='button' value='view joined data entry' onClick= 'viewJoinedInfo(getTableFromURL())'></div>";
       lefts.push(left);
       rights.push(right);
       id=""

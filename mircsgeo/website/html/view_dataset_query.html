@@ -7,22 +7,19 @@
 </script>
 <script src="{% static 'js/createTable.js' %}"></script>
 <script src="{% static 'js/view_dataset_query.js' %}"></script>
+<script src="{% static 'js/click_dot.js' %}"></script>
 
 {% endblock %}
 
 <!-- Creating the UI to display the datasets-->
 {% block title %}MIRCS Geo-Genealogy{% endblock %}
 {% block content %}
-<div class="ui modal">
+<div class="ui long modal">
   <i class="close icon"></i>
   <div class="header">
     Details
   </div>
-  <div class="image content">
-    <div class="ui two column very relaxed grid">
-      <div class="column"><p id="l"></p></div>
-      <div class="column"><p id="r"></p></div>
-    </div>
+  <div class="image content" id="m_content">
   </div>
   <div class="actions">
     <div class="ui black deny button">
