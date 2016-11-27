@@ -82,6 +82,15 @@ dataset_joins = Table('dataset_joins', m,
     )
 )
 
+resources = Table('resources', m,
+    Column('id', Integer, primary_key=True),
+    Column('dataset_uuid', String),
+    Column('row_id', Integer),
+    Column('location', String),
+    Column('file_name', String),
+    ForeignKeyConstraint(['dataset_uuid'], [settings.DATABASES['default']['SCHEMA'] + '.datasets.uuid']),
+)
+
 # SAVAGE
 # Close your eyes
 def name_for_collection_relationship(base, local_cls, refered_cls, constraint):

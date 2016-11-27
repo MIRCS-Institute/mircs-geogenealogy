@@ -951,6 +951,15 @@ def create_df_from_upload(request):
 
     return df
 
+def test_add_file(request, table, row_id, resource):
+    """
+    A test function
+    @TODO; Remove
+    """
+    file_r = open('/home/vagrant/data/mircs-geogenealogy/mircsgeo/website/Hearthstone Screenshot 04-13-15 19.28.21.png')
+    return HttpResponse(table_generator.add_resource(table, row_id, file_r))
+
+
 def Session():
     """
     Creates and returns an sqlalchemy session mapped to django orm's models

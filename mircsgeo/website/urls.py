@@ -24,5 +24,6 @@ urlpatterns = [
     url(r'^download/(?P<table>[^/]+)/$', views.download_dataset, name='download_dataset'),
     url(r'^search/(?P<table>[^/]+)/$', views.search_dataset, name='search_dataset'),
     url(r'^get_dataset_query/(?P<table>[^/]+)/(?P<columnName>[^/]+)/(?P<queryString>[^/]+)/$', views.get_dataset_query, name='get_dataset_query'),
-    url(r'^get_query_geojson/(?P<table>[^/]+)/(?P<columnName>[^/]+)/(?P<queryString>[^/]+)/$', views.get_query_geojson, name="get_query_geojson")
+    url(r'^get_query_geojson/(?P<table>[^/]+)/(?P<columnName>[^/]+)/(?P<queryString>[^/]+)/$', views.get_query_geojson, name="get_query_geojson"),
+    url(r'^test_file/(?P<table>[^/]+)/(?P<row_id>[^/]+)/(?P<resource>[^/]+)/$', views.test_add_file, name="test_file"),
 ]

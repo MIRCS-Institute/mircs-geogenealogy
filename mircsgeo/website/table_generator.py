@@ -1,12 +1,16 @@
 import numpy as np
 import pandas as pd
 import datetime, time
+from django.conf import settings
 
 from sqlalchemy import create_engine, MetaData, Table, Column, Integer, \
                        String, Float, DateTime, ForeignKeyConstraint, ForeignKey,\
                        Enum, UniqueConstraint, Boolean, func
 from geoalchemy2 import Geometry
 from types import StringType
+
+import uuid
+import os
 
 import website.models as m
 
@@ -420,9 +424,73 @@ def truncate_table(table):
     session.close()
 
 
+def add_resource(table, row_id, resource):
+    """
+    Adds a resource to a row of a dataset so links and files can be linked to
+    dataset rows. When dealing with a file, the file is saved in resources folder
+    located in the media folder
+
+    Parameters:
+    table (str) - the name of the table
+    row_id (int) - the id of the row_id
+    resource (mixed) - file to save or str
+
+    Return:
+    (bool) - True if resource was added
+    """
+    Resource = m.Base.classes.resources
+    session = m.get_session()
+    table_orm = getattr(m.Base.classes, table)
+    count = len((session.query(table_orm).filter(table_orm.id == row_id)).all())
+    if count == 1:
+
+        resource_orm = Resource()
+        resource_orm.dataset_uuid = table
+        resource_orm.row_id = row_id
+        if type(resource) is str:
+            resource_orm.location = resource
+        elif type(resource) is file:
+            resource_name = os.path.basename(resource.name)
+            resource_dir = os.path.join(
+                os.path.dirname(__file__),
+                settings.MEDIA_ROOT,
+                'resources'
+            )
+            try:
+                if not os.path.isdir(resource_dir):
+                    os.mkdir(resource_dir)
+                ext = os.path.splitext(resource_name)[1]
+                file_name = '%s.%s' % (uuid.uuid4(), ext)
+                full_path = os.path.join(
+                    resource_dir,
+                    file_name
+                )
+                new_file = open(full_path, 'w')
+                new_file.write(resource.read())
+                new_file.close()
+                resource_orm.location = full_path
+                resource_orm.file_name = resource_name
+            except:
+                print "Except!"
+                raise
+                session.close()
+                return False
+
+        session.add(resource_orm)
+        session.commit()
+        session.close()
+        return True
+    session.close()
+    return False
+
+
+
 def convert_nans(rows):
     """
     Convert np.NaN objects to 'null' so rows is JSON serializable
+
+    Parameters:
+    rows (list) - list of rows
     """
     for row in rows:
         for i, e in enumerate(row):
