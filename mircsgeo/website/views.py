@@ -449,7 +449,7 @@ def add_dataset_key(request, table):
     if request.method == 'POST':
         # Get the POST parameter
         post_data = dict(request.POST)
-        dataset_columns = post_data['dataset_columns[]']
+        dataset_columns = post_data['dataset_columns']
 
         # Get the table
         t = getattr(m.Base.classes, table)
@@ -539,6 +539,76 @@ def get_dataset_page(request, table, page_number):
         'lat': median_lat,
         'lon': median_lon
     })
+def get_household_members(request, table, person_id):
+    """
+    get data on members of the same household_ID
+
+    Parameters:
+    table(str) - The uuid of the table being requested
+    person_id - the id of the person whoose family information is being requested
+
+    Returns:
+    JsonResponse (str) - A JSON string containing:
+                                                  *data entries related to the person
+    """
+    # Get a session
+    session = m.get_session()
+
+    # Get the object for the table we're working with
+    table_id = table
+    table = getattr(m.Base.classes, table)
+
+    # Query the table for family information from row with the correct person_id
+    query = session.query(
+        table.ID_of_Spouse,
+        table.Children_name_ID,
+        table.Mothers_ID,
+        table.Fathers_ID,
+        table.Siblings_IDs
+    ).filter(
+        table.PERSON_ID == person_id
+    )
+    #get dataframe of query
+    df = pd.read_sql(query.statement, query.session.bind)
+
+    columnList = df.columns.values.tolist()
+    spouse_id=""
+    child_ids=""
+    mom_id=""
+    dad_id=""
+    sib_ids=""
+    #get families id information from the dataframe
+    for row in df.itertuples():
+        spouse_id = row[columnList.index('ID_of_Spouse')+1]
+        child_ids = row[columnList.index('Children_name_ID')+1]
+        mom_id = row[columnList.index('Mothers_ID')+1]
+        dad_id = row[columnList.index('Fathers_ID')+1]
+        sib_ids = row[columnList.index('Siblings_IDs')+1]
+    childlist=[]
+    if child_ids != None:
+        childlist = child_ids.split('; ')
+    siblist=[]
+    if sib_ids != None:
+        siblist = sib_ids.split('; ')
+    #query the table for rows corresponding to this person and their family
+    query = session.query(
+        table
+    ).filter(
+        or_(
+            table.PERSON_ID == person_id,
+            table.PERSON_ID == mom_id,
+            table.PERSON_ID == dad_id,
+            table.PERSON_ID == spouse_id,
+            table.PERSON_ID.in_(childlist),
+            table.PERSON_ID.in_(siblist)
+        )
+    )
+    df = pd.read_sql(query.statement, query.session.bind)
+    #return nescessary data
+    return JsonResponse({
+        'data':df.to_json(),
+        'numEntries': len(df.index)
+    })
 
 def get_joined_dataset(request,table,page_number):
     """
@@ -590,6 +660,7 @@ def get_joined_dataset(request,table,page_number):
         i1_name = row[columnList.index('index1_name')+1]
         d2_id = row[columnList.index('dataset2_uuid')+1]
         joined_database_ids.append(d2_id)
+        curr_db = d2_id
         i2_name = row[columnList.index('index2_name')+1]
         #query for the join key from the main table
         d1_key_query = session.query(
@@ -632,9 +703,12 @@ def get_joined_dataset(request,table,page_number):
             #get result of sql query in the form of a dict and append to the final results
             for j in result:
                 rowRes = dict(zip(j.keys(), j))
+                rowRes['dataset'] = curr_db
                 joined_results.append(rowRes)
     return JsonResponse({
         'joined_database_ids':json.dumps(joined_database_ids),
+        'main_dataset_key': cols1,
+        'joined_dataset_key':cols2,
         'data':json.dumps(joined_results)})
 
 def join_datasets(request, table):
