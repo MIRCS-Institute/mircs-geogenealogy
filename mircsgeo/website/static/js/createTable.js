@@ -49,7 +49,26 @@ function createTableRow(dataRow) {
   var tableRow = $('<tr></tr>');
   for(var i=0; i<dataRow.length; i++) {
     // Create a table element for every cell
-    tableRow.append('<td class="col_' + i + '">' + dataRow[i] + '</td>');
+    tableRow.append('<td class="selectable">' + '<a href="javascript:clickRow(\''+dataRow+'\');">' + dataRow[i] + '</a>' + '</td>');
   }
   return tableRow;
+}
+
+//When the user clicks on a row, bring up a modal with the information on it
+function clickRow(dataRowString)
+{
+	var dataRow = dataRowString.split(",");
+	$.getJSON('/get_dataset_columns/' + getTableFromURL(), function(data) {
+		viewRowModal(dataRow, data['columns']);
+	});
+}
+function viewRowModal(dataRow, columns)
+{
+	var left = "";
+	var right = "";
+	for(var i = 0; i < columns.length; i++){
+        left += "<font color='purple'>" + columns[i] + "</font>"+ "<br/>";
+        right += dataRow[i] +"<br/>";
+	}
+	myFunction(left, right);
 }

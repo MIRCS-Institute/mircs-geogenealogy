@@ -13,7 +13,7 @@ import math
 import numbers
 
 import website.models as m
-from .forms import Uploadfile, AddDatasetKey, SearchData
+from .forms import Uploadfile, AddDatasetKey
 
 import pandas as pd
 
@@ -23,6 +23,8 @@ import uuid
 import datetime
 
 import website.table_generator as table_generator
+
+import logging
 
 schema = "mircs"
 
@@ -205,6 +207,22 @@ def create_table(request):
     else:
         return None
 
+def get_dataset_columns(request, table):
+    # Get a session
+    session = m.get_session()
+    # Get the object for the table we're working with
+    table = getattr(m.Base.classes, table)
+    table = session.query(table)
+    # Get a DataFrame
+    df = pd.read_sql(table.statement, table.session.bind)
+
+    # Convert to a list of strings
+    columns = df.columns.tolist()
+
+    session.close()
+    return JsonResponse({
+        'columns': columns, #Return the list
+    })
 
 def view_dataset(request, table):
     """
@@ -222,21 +240,40 @@ def view_dataset(request, table):
         m.DATASETS.uuid == table
     ).one()[0])  # This returns a list containing a single element(original_filename)
                  # The [0] gets the filename out of the list
-
+    session.close()
     # Render the view dataset page
     return render(request, 'view_dataset.html', {
         'tablename': file_name
     })
 
 def search_dataset(request, table):
+    """
+    Opens the page that allows the user to search a dataset, and retrieve the input data in post to view it
+    """
     if request.method == 'POST':
-        post_data = dict(request.POST)
-        columnName = post_data['columnName'][0]
-        queryString = post_data['queryString'][0]
+        # Get session
+        session = m.get_session()
+        # Get the object for the table we're working with
+        table = getattr(m.Base.classes, table)
+        table = session.query(table)
+        # Get a DataFrame
+        df = pd.read_sql(table.statement, table.session.bind)
+        # Get the list of columns
+        columns = df.columns.tolist()
+        # Close the session
+        session.close()
 
+        post_data = dict(request.POST) #Retrieve the post data
+        queries = []
+
+        # Load the post data into an array of pairs (columns and respective input strings)
+        for col in columns: #Check each column in the table
+            if col in post_data: #If that column name was returned in the post data, then there is an input for it
+                queries.append([col, post_data[col+'_query'][0].encode("ascii")]) #Add the pair
+
+        #Call the page to view the results of the search and pass the queries
         return render(request, 'view_dataset_query.html', {
-            'columnName': columnName,
-            'queryString': queryString
+            'queries': queries
         })
     else:
         # Get the columns in the table and add them to the dropdown in the form
@@ -245,20 +282,52 @@ def search_dataset(request, table):
         # Return the form
         return render(request, 'search_dataset.html', {'form': form})
 
-def get_dataset_query(request, table, columnName, queryString):
+
+def get_dataset_query(request, table, queries):
+    """
+    Uses input data to build a SQL alchemy query and returns the resulting data
+    """
+    # Get the list of queries
+    queries = queries.split("/")[:-1]
+    # This list in in the format [col1, query for col1, col2, query for col2, etc...]
+
     # Get a session
     session = m.get_session()
 
     # Get the object for the table we're working with
     table = getattr(m.Base.classes, table)
 
+	# Build the query command
+    i = 0
+    search = "query = session.query(table).filter("
+    valid = True
+    while i < len(queries) and valid:
+        if i != 0: #Add commas between filters
+            search += ", "
+        logging.warning(str(getattr(table, queries[i]).type))
+        if str(getattr(table, queries[i]).type) == 'INTEGER': #Query for integer columns
+            if isInt(queries[i+1]): #If input string is a valid integer, add the filter
+                search += "getattr(table, queries["+str(i)+"]) == int(queries["+str(i+1)+"])"
+            else: # If the input is not valid, the query cannot return any results
+                valid = False
+        elif str(getattr(table, queries[i]).type) == 'DOUBLE PRECISION': #Query for decimal columns
+            if isFloat(queries[i+1]): #If input string is a valid float, add the filter
+                search += "getattr(table, queries["+str(i)+"]) == float(queries["+str(i+1)+"])"
+            else: # If the input is not valid, the query cannot return any results
+                valid = False
+        else: # Query for string columns
+            search += "getattr(table, queries["+str(i)+"]).ilike(\"%\"+queries["+str(i+1)+"]+\"%\")"
+        i += 2 #Items accessed from list in pairs [col1, quer1, col2, quer2, etc...]
+
+    if not valid: #If the query had invalid input, return with a false value
+        session.close()
+        return JsonResponse({
+            'valid': valid
+        })
+
+    search += ")"
     # Query the table
-    query = session.query(
-        table
-    ).filter(
-        #getattr(table, columnName) == queryString
-        getattr(table, columnName).ilike("%"+queryString+"%")
-    )
+    exec(search)
 
     # Get a DataFrame with the results of the query
     df = pd.read_sql(query.statement, query.session.bind)
@@ -266,24 +335,19 @@ def get_dataset_query(request, table, columnName, queryString):
     # Convert everything to the correct formats for displaying
     columns = df.columns.tolist()
     rows = table_generator.convert_nans(df.values.tolist())
-    median_lat = df.LATITUDE.median()
-    median_lon = df.LONGITUDE.median()
 
+    session.close()
     return JsonResponse({
         'columns': columns,
         'rows': rows,
-        'lat': median_lat,
-        'lon': median_lon
+        'valid': valid
     })
+
 
 def get_query_geojson(request, table, columnName, queryString):
     """
     Returns geojson created from the geospatial columns of query
     """
-
-    # Get a session
-    session = m.get_session()
-
     t = getattr(m.Base.classes, table)
 
     # Get geospatial columns
@@ -320,6 +384,22 @@ def get_query_geojson(request, table, columnName, queryString):
             'keys': sorted(properties.keys())
         })
     return JsonResponse(geojson, safe=False)
+
+
+def isFloat(value): #Returns true if the given string can be converted to a valid float
+    try:
+        float(value)
+        return True
+    except ValueError:
+        return False
+
+
+def isInt(value): #Returns true if the given string can be converted to a valid integer
+    try:
+        int(value)
+        return True
+    except ValueError:
+        return False
 
 
 def manage_dataset(request, table):
@@ -525,6 +605,7 @@ def add_dataset_key(request, table):
         post_data = dict(request.POST)
 
         key_name = post_data['dataset_key_name'][0]
+        
         dataset_columns = post_data['dataset_columns']
 
         # Get the table
@@ -612,6 +693,76 @@ def get_dataset_page(request, table, page_number):
         'lat': median_lat,
         'lon': median_lon
     })
+def get_household_members(request, table, person_id):
+    """
+    get data on members of the same household_ID
+
+    Parameters:
+    table(str) - The uuid of the table being requested
+    person_id - the id of the person whoose family information is being requested
+
+    Returns:
+    JsonResponse (str) - A JSON string containing:
+                                                  *data entries related to the person
+    """
+    # Get a session
+    session = m.get_session()
+
+    # Get the object for the table we're working with
+    table_id = table
+    table = getattr(m.Base.classes, table)
+
+    # Query the table for family information from row with the correct person_id
+    query = session.query(
+        table.ID_of_Spouse,
+        table.Children_name_ID,
+        table.Mothers_ID,
+        table.Fathers_ID,
+        table.Siblings_IDs
+    ).filter(
+        table.PERSON_ID == person_id
+    )
+    #get dataframe of query
+    df = pd.read_sql(query.statement, query.session.bind)
+
+    columnList = df.columns.values.tolist()
+    spouse_id=""
+    child_ids=""
+    mom_id=""
+    dad_id=""
+    sib_ids=""
+    #get families id information from the dataframe
+    for row in df.itertuples():
+        spouse_id = row[columnList.index('ID_of_Spouse')+1]
+        child_ids = row[columnList.index('Children_name_ID')+1]
+        mom_id = row[columnList.index('Mothers_ID')+1]
+        dad_id = row[columnList.index('Fathers_ID')+1]
+        sib_ids = row[columnList.index('Siblings_IDs')+1]
+    childlist=[]
+    if child_ids != None:
+        childlist = child_ids.split('; ')
+    siblist=[]
+    if sib_ids != None:
+        siblist = sib_ids.split('; ')
+    #query the table for rows corresponding to this person and their family
+    query = session.query(
+        table
+    ).filter(
+        or_(
+            table.PERSON_ID == person_id,
+            table.PERSON_ID == mom_id,
+            table.PERSON_ID == dad_id,
+            table.PERSON_ID == spouse_id,
+            table.PERSON_ID.in_(childlist),
+            table.PERSON_ID.in_(siblist)
+        )
+    )
+    df = pd.read_sql(query.statement, query.session.bind)
+    #return nescessary data
+    return JsonResponse({
+        'data':df.to_json(),
+        'numEntries': len(df.index)
+    })
 
 def get_joined_dataset(request,table,page_number):
     """
@@ -661,6 +812,7 @@ def get_joined_dataset(request,table,page_number):
         i1_name = row[columnList.index('index1_name')+1]
         d2_id = row[columnList.index('dataset2_uuid')+1]
         joined_database_ids.append(d2_id)
+        curr_db = d2_id
         i2_name = row[columnList.index('index2_name')+1]
         #query for the join key from the main table
         d1_key_query = session.query(
@@ -703,9 +855,12 @@ def get_joined_dataset(request,table,page_number):
             #get result of sql query in the form of a dict and append to the final results
             for j in result:
                 rowRes = dict(zip(j.keys(), j))
+                rowRes['dataset'] = curr_db
                 joined_results.append(rowRes)
     return JsonResponse({
         'joined_database_ids':json.dumps(joined_database_ids),
+        'main_dataset_key': cols1,
+        'joined_dataset_key':cols2,
         'data':json.dumps(joined_results)})
 
 

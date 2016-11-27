@@ -13,16 +13,12 @@
 <!-- Creating the UI to display the datasets-->
 {% block title %}MIRCS Geo-Genealogy{% endblock %}
 {% block content %}
-<div class="ui modal">
+<div class="ui long modal">
   <i class="close icon"></i>
   <div class="header">
     Details
   </div>
-  <div class="image content">
-    <div class="ui two column very relaxed grid">
-      <div class="column"><p id="l"></p></div>
-      <div class="column"><p id="r"></p></div>
-    </div>
+  <div class="image content" id="m_content">
   </div>
   <div class="actions">
     <div class="ui black deny button">
@@ -51,7 +47,7 @@
     </div>
     <div class="ui segment" style='overflow-x:scroll'>
       <div class='ui pagination menu pagePicker'></div>
-      <table id="dataTable"  class="ui sortable celled table" ></table>
+      <table id="dataTable"  class="ui selectable celled table" ></table>
       <div class='ui pagination menu pagePicker'></div>
     </div>
   </div>

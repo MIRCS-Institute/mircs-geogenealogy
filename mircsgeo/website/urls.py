@@ -21,9 +21,10 @@ urlpatterns = [
     url(r'^get_dataset_page/(?P<table>[^/]+)/(?P<page_number>[0-9]+)/$', views.get_dataset_page, name='get_dataset_page'),
     url(r'^get_joined_dataset/(?P<table>[^/]+)/(?P<page_number>[0-9]+)/$', views.get_joined_dataset, name='get_joined_dataset'),
     url(r'^get_dataset_geojson/(?P<table>[^/]+)/(?P<page_number>[0-9]+)/$', views.get_dataset_geojson, name="get_dataset_geojson"),
+    url(r'^get_household_members/(?P<table>[^/]+)/(?P<person_id>[\w|\-]+)/$', views.get_household_members, name="get_household_members"),
     url(r'^download/(?P<table>[^/]+)/$', views.download_dataset, name='download_dataset'),
     url(r'^search/(?P<table>[^/]+)/$', views.search_dataset, name='search_dataset'),
-    url(r'^get_dataset_query/(?P<table>[^/]+)/(?P<columnName>[^/]+)/(?P<queryString>[^/]+)/$', views.get_dataset_query, name='get_dataset_query'),
-    url(r'^get_query_geojson/(?P<table>[^/]+)/(?P<columnName>[^/]+)/(?P<queryString>[^/]+)/$', views.get_query_geojson, name="get_query_geojson"),
+    url(r'^get_dataset_query/(?P<table>[^/]+)/(?P<queries>([^/]+\/)+)$', views.get_dataset_query, name='get_dataset_query'),
+    url(r'^get_dataset_columns/(?P<table>[^/]+)/$', views.get_dataset_columns, name='get_dataset_columns'),
     url(r'^test_file/(?P<table>[^/]+)/(?P<row_id>[^/]+)/(?P<resource>[^/]+)/$', views.test_add_file, name="test_file"),
 ]
