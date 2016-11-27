@@ -24,8 +24,9 @@ import datetime
 
 import website.table_generator as table_generator
 
-schema = "mircs"
+import logging
 
+schema = "mircs"
 
 def home(request):
     """
@@ -206,6 +207,22 @@ def create_table(request):
     else:
         return None
 
+def get_dataset_columns(request, table):
+    # Get a session
+    session = m.get_session()
+    # Get the object for the table we're working with
+    table = getattr(m.Base.classes, table)
+    table = session.query(table)
+    # Get a DataFrame
+    df = pd.read_sql(table.statement, table.session.bind)
+
+    # Convert to a list of strings
+    columns = df.columns.tolist()
+
+    session.close()
+    return JsonResponse({
+        'columns': columns, #Return the list
+    })
 
 def view_dataset(request, table):
     """
@@ -223,21 +240,117 @@ def view_dataset(request, table):
         m.DATASETS.uuid == table
     ).one()[0])  # This returns a list containing a single element(original_filename)
                  # The [0] gets the filename out of the list
-    session.close
+    session.close()
+    # Render the view dataset page
+    return render(request, 'view_dataset.html', {
+        'tablename': file_name
+    })
+	
+def search_dataset(request, table):
+    """
+    Opens the page that allows the user to search a dataset, and retrieve the input data in post to view it
+    """
+    if request.method == 'POST':
+        # Get session
+        session = m.get_session()
+        # Get the object for the table we're working with
+        table = getattr(m.Base.classes, table)
+        table = session.query(table)
+        # Get a DataFrame
+        df = pd.read_sql(table.statement, table.session.bind)
+        # Get the list of columns
+        columns = df.columns.tolist()
+        # Close the session
+        session.close()
 
-    db = Session().connection()
-    # Get the first 100 rows of data out of the database for the requested dataset
-    df = pd.read_sql("SELECT * FROM " + schema + ".\"" + table + "\" LIMIT 100",
-                     db, params={'schema': schema, 'table': table})
+        post_data = dict(request.POST) #Retrieve the post data
+        queries = []
+
+        # Load the post data into an array of pairs (columns and respective input strings)
+        for col in columns: #Check each column in the table
+            if col in post_data: #If that column name was returned in the post data, then there is an input for it
+                queries.append([col, post_data[col+'_query'][0].encode("ascii")]) #Add the pair
+
+        #Call the page to view the results of the search and pass the queries
+        return render(request, 'view_dataset_query.html', { 
+            'queries': queries
+        })
+    else:
+        return render(request, 'search_dataset.html')
+
+def get_dataset_query(request, table, queries):
+    """
+    Uses input data to build a SQL alchemy query and returns the resulting data
+    """
+    # Get the list of queries
+    queries = queries.split("/")[:-1]
+    # This list in in the format [col1, query for col1, col2, query for col2, etc...]
+
+    # Get a session
+    session = m.get_session()
+
+    # Get the object for the table we're working with
+    table = getattr(m.Base.classes, table)
+
+	# Build the query command
+    i = 0
+    search = "query = session.query(table).filter("
+    valid = True
+    while i < len(queries) and valid:
+        if i != 0: #Add commas between filters
+            search += ", "
+        logging.warning(str(getattr(table, queries[i]).type))
+        if str(getattr(table, queries[i]).type) == 'INTEGER': #Query for integer columns
+            if isInt(queries[i+1]): #If input string is a valid integer, add the filter
+                search += "getattr(table, queries["+str(i)+"]) == int(queries["+str(i+1)+"])"
+            else: # If the input is not valid, the query cannot return any results
+                valid = False
+        elif str(getattr(table, queries[i]).type) == 'DOUBLE PRECISION': #Query for decimal columns
+            if isFloat(queries[i+1]): #If input string is a valid float, add the filter
+                search += "getattr(table, queries["+str(i)+"]) == float(queries["+str(i+1)+"])"
+            else: # If the input is not valid, the query cannot return any results
+                valid = False
+        else: # Query for string columns
+            search += "getattr(table, queries["+str(i)+"]).ilike(\"%\"+queries["+str(i+1)+"]+\"%\")"
+        i += 2 #Items accessed from list in pairs [col1, quer1, col2, quer2, etc...]
+
+    if not valid: #If the query had invalid input, return with a false value
+        session.close()
+        return JsonResponse({
+            'valid': valid
+        })
+
+    search += ")"
+    # Query the table
+    exec(search)
+
+    # Get a DataFrame with the results of the query
+    df = pd.read_sql(query.statement, query.session.bind)
+
+    # Convert everything to the correct formats for displaying
     columns = df.columns.tolist()
     rows = table_generator.convert_nans(df.values.tolist())
 
-    # Render the view dataset page
-    return render(request, 'view_dataset.html', {
-        'dataset': rows,
+    session.close()
+    return JsonResponse({
         'columns': columns,
-        'tablename': file_name,
+        'rows': rows,
+        'valid': valid
     })
+
+def isInt(value): #Returns true if the given string can be converted to a valid integer
+    try:
+        int(value)
+        return True
+    except ValueError:
+        return False
+
+def isFloat(value): #Returns true if the given string can be converted to a valid float
+    try:
+        float(value)
+        return True
+    except ValueError:
+        return False
 
 def manage_dataset(request, table):
     """
@@ -404,11 +517,11 @@ def append_dataset(request, table, flush=False):
             'form': form,
             'table': table
         })
-
+		
 def update_dataset(request, table):
     """
     update  dataset to existing table
-
+	
     Parameters:
     table (str) - the name of the table to be displayed. This should be a UUID
     """
@@ -527,8 +640,7 @@ def get_dataset_page(request, table, page_number):
 
     # Convert everything to the correct formats for displaying
     columns = df.columns.tolist()
-    rows = df.values.tolist()
-    rows = table_generator.convert_nans(rows)
+    rows = table_generator.convert_nans(df.values.tolist())
     median_lat = df.LATITUDE.median()
     median_lon = df.LONGITUDE.median()
 
@@ -613,11 +725,9 @@ def get_household_members(request, table, person_id):
 def get_joined_dataset(request,table,page_number):
     """
     get joined data for specific page of dataset
-
     Parameters:
     table (str) - The uuid of the table being requested
     page_number (int) - The page being requested
-
     Returns:
     JsonResponse (str) - A JSON string containing:
                                                   *uuids of databases joined to this one
@@ -710,6 +820,7 @@ def get_joined_dataset(request,table,page_number):
         'main_dataset_key': cols1,
         'joined_dataset_key':cols2,
         'data':json.dumps(joined_results)})
+
 
 def join_datasets(request, table):
     """
@@ -839,7 +950,6 @@ def get_dataset_geojson(request, table, page_number):
 def download_dataset(request, table):
     """
     Download full database table as .csv file
-
     Parameters:
     table (str) - the name of the table to be displayed. This should be a UUID
     """
@@ -866,7 +976,7 @@ def download_dataset(request, table):
     #Content-Disposition tells browser name of file to be downloaded
     response['Content-Disposition'] = 'attachment; filename = export_%s'%file_name
     #convert dataframe to csv
-    df.to_csv(response)
+    df.to_csv(response, index=False)
 
     return response
 
@@ -894,7 +1004,6 @@ def convert_time_columns(df, datetime_identifiers=['time', 'date']):
             if d in c.lower():
                 df[c] = pd.to_datetime(df[c])
     return df
-
 
 def get_pagination_id_range(table, page_number):
     """
@@ -929,8 +1038,8 @@ def get_pagination_id_range(table, page_number):
         int(page_number) * settings.DATASET_ITEMS_PER_PAGE,
         (int(page_number) + 1) * settings.DATASET_ITEMS_PER_PAGE
     )
+	
     session.close()
-
     return id_range, page_count
 
 def create_df_from_upload(request):

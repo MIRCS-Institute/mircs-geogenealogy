@@ -1,0 +1,53 @@
+<!-- UI to view the datasets -->
+{% extends "base.html" %}
+{% load staticfiles %}
+{% block externalLibraries %}
+<script>
+	var queries = {{ queries|safe }}; <!--Queries from user input-->
+</script>
+<script src="{% static 'js/createTable.js' %}"></script>
+<script src="{% static 'js/view_dataset_query.js' %}"></script>
+
+{% endblock %}
+
+<!-- Creating the UI to display the datasets-->
+{% block title %}MIRCS Geo-Genealogy{% endblock %}
+{% block content %}
+<div class="ui modal">
+  <i class="close icon"></i>
+  <div class="header">
+    Details
+  </div>
+  <div class="image content">
+    <div class="ui two column very relaxed grid">
+      <div class="column"><p id="l"></p></div>
+      <div class="column"><p id="r"></p></div>
+    </div>
+  </div>
+  <div class="actions">
+    <div class="ui black deny button">
+      Close
+    </div>
+  </div>
+</div>
+<div class="ui container">
+  <a href="/" class="ui button">Home</a>
+  <div class="ui segments">
+    <div class="ui segment">
+     <!-- <h1 class="ui header">{{ tablename }}</h1> -->
+	 <h1 class="ui header">Results of search (Select a row to add a file to it)</h1>
+    </div>
+
+    <div class="ui segment" style='overflow-x:scroll'>
+      <table id="dataTable" class="ui selectable celled table" ></table>
+    </div>
+  </div>
+</div>
+<script type="text/javascript">
+  $(document).ready(function(){
+    $('.sortable.table').tablesort();
+  });
+</script>
+<script src="{% static 'vendor/semantic/components/tablesort.js' %}"></script>
+
+{% endblock %}

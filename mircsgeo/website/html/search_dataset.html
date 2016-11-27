@@ -1,0 +1,36 @@
+<!-- Presenting the interface to add keys to the dataset-->
+{% extends "base.html" %}
+{% load staticfiles %}
+
+{% block externalLibraries %}
+<!-- <script>
+	var columns = {{ columns }};
+</script>-->
+<script src="{% static 'js/search_dataset.js' %}"></script>
+{% endblock %}
+
+{% block title %}MIRCS Geo-Genealogy{% endblock %}
+
+{% block content %}
+<div class="ui container">
+	<a href="/" class="ui button">Home</a>
+	<div class="ui segments">
+		<div class="ui segment">
+			<h1 class="ui header">Search for the dataset entry where you wish to add a file</h1>
+		</div>
+		<div class="ui segment grid">
+			<form method='post' class="ui form">
+			{% csrf_token %}
+			<div class="field">
+				<div class = "wrap">
+					<h1 style="font-size:100%;">Choose the columns that you want to filter by:</h1>
+					<div class="checkboxGrid" id="checkboxes"></div>
+				</div>
+				<p id="inputfields"></p>
+			</div>
+			<input id='submit_dataset_query' class="ui button green" type="submit" value="Submit"/><br><br>
+			</form>
+		</div>
+	</div>
+</div>
+{% endblock %}
