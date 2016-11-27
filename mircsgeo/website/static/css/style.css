@@ -5,3 +5,15 @@
 .ui.modal h2 {
   text-align: center;
 }
+
+.checkboxGrid li {
+	display: block;
+	float: left;
+	width: 25%
+}
+
+.wrap {
+	display: block;
+	float: left;
+	padding: 10px 0px 15px 0px
+}

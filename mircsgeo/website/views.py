@@ -13,7 +13,7 @@ import math
 import numbers
 
 import website.models as m
-from .forms import Uploadfile, AddDatasetKey, SearchData
+from .forms import Uploadfile, AddDatasetKey
 
 import pandas as pd
 
@@ -23,6 +23,8 @@ import uuid
 import datetime
 
 import website.table_generator as table_generator
+
+import logging
 
 schema = "mircs"
 
@@ -205,6 +207,22 @@ def create_table(request):
     else:
         return None
 
+def get_dataset_columns(request, table):
+    # Get a session
+    session = m.get_session()
+    # Get the object for the table we're working with
+    table = getattr(m.Base.classes, table)
+    table = session.query(table)
+    # Get a DataFrame
+    df = pd.read_sql(table.statement, table.session.bind)
+
+    # Convert to a list of strings
+    columns = df.columns.tolist()
+
+    session.close()
+    return JsonResponse({
+        'columns': columns, #Return the list
+    })
 
 def view_dataset(request, table):
     """
@@ -222,43 +240,89 @@ def view_dataset(request, table):
         m.DATASETS.uuid == table
     ).one()[0])  # This returns a list containing a single element(original_filename)
                  # The [0] gets the filename out of the list
-
+    session.close()
     # Render the view dataset page
     return render(request, 'view_dataset.html', {
         'tablename': file_name
     })
 	
 def search_dataset(request, table):
+    """
+    Opens the page that allows the user to search a dataset, and retrieve the input data in post to view it
+    """
     if request.method == 'POST':
-        post_data = dict(request.POST)
-        columnName = post_data['columnName'][0]
-        queryString = post_data['queryString'][0]
+        # Get session
+        session = m.get_session()
+        # Get the object for the table we're working with
+        table = getattr(m.Base.classes, table)
+        table = session.query(table)
+        # Get a DataFrame
+        df = pd.read_sql(table.statement, table.session.bind)
+        # Get the list of columns
+        columns = df.columns.tolist()
+        # Close the session
+        session.close()
 
-        return render(request, 'view_dataset_query.html', {
-            'columnName': columnName,
-            'queryString': queryString
+        post_data = dict(request.POST) #Retrieve the post data
+        queries = []
+
+        # Load the post data into an array of pairs (columns and respective input strings)
+        for col in columns: #Check each column in the table
+            if col in post_data: #If that column name was returned in the post data, then there is an input for it
+                queries.append([col, post_data[col+'_query'][0].encode("ascii")]) #Add the pair
+
+        #Call the page to view the results of the search and pass the queries
+        return render(request, 'view_dataset_query.html', { 
+            'queries': queries
         })
     else:
-        # Get the columns in the table and add them to the dropdown in the form
-        columns = [str(x).split('.')[1] for x in getattr(m.Base.classes, table).__table__.columns]
-        form = SearchData(zip(columns, columns))
-        # Return the form
-        return render(request, 'search_dataset.html', {'form': form})
-	
-def get_dataset_query(request, table, columnName, queryString):
+        return render(request, 'search_dataset.html')
+
+def get_dataset_query(request, table, queries):
+    """
+    Uses input data to build a SQL alchemy query and returns the resulting data
+    """
+    # Get the list of queries
+    queries = queries.split("/")[:-1]
+    # This list in in the format [col1, query for col1, col2, query for col2, etc...]
+
     # Get a session
     session = m.get_session()
 
     # Get the object for the table we're working with
     table = getattr(m.Base.classes, table)
 
+	# Build the query command
+    i = 0
+    search = "query = session.query(table).filter("
+    valid = True
+    while i < len(queries) and valid:
+        if i != 0: #Add commas between filters
+            search += ", "
+        logging.warning(str(getattr(table, queries[i]).type))
+        if str(getattr(table, queries[i]).type) == 'INTEGER': #Query for integer columns
+            if isInt(queries[i+1]): #If input string is a valid integer, add the filter
+                search += "getattr(table, queries["+str(i)+"]) == int(queries["+str(i+1)+"])"
+            else: # If the input is not valid, the query cannot return any results
+                valid = False
+        elif str(getattr(table, queries[i]).type) == 'DOUBLE PRECISION': #Query for decimal columns
+            if isFloat(queries[i+1]): #If input string is a valid float, add the filter
+                search += "getattr(table, queries["+str(i)+"]) == float(queries["+str(i+1)+"])"
+            else: # If the input is not valid, the query cannot return any results
+                valid = False
+        else: # Query for string columns
+            search += "getattr(table, queries["+str(i)+"]).ilike(\"%\"+queries["+str(i+1)+"]+\"%\")"
+        i += 2 #Items accessed from list in pairs [col1, quer1, col2, quer2, etc...]
+
+    if not valid: #If the query had invalid input, return with a false value
+        session.close()
+        return JsonResponse({
+            'valid': valid
+        })
+
+    search += ")"
     # Query the table
-    query = session.query(
-        table
-    ).filter(
-        #getattr(table, columnName) == queryString
-        getattr(table, columnName).ilike("%"+queryString+"%")
-    )
+    exec(search)
 
     # Get a DataFrame with the results of the query
     df = pd.read_sql(query.statement, query.session.bind)
@@ -266,61 +330,27 @@ def get_dataset_query(request, table, columnName, queryString):
     # Convert everything to the correct formats for displaying
     columns = df.columns.tolist()
     rows = table_generator.convert_nans(df.values.tolist())
-    median_lat = df.LATITUDE.median()
-    median_lon = df.LONGITUDE.median()
 
+    session.close()
     return JsonResponse({
         'columns': columns,
         'rows': rows,
-        'lat': median_lat,
-        'lon': median_lon
+        'valid': valid
     })
-	
-def get_query_geojson(request, table, columnName, queryString):
-    """
-    Returns geojson created from the geospatial columns of query
-    """
 
-    # Get a session
-    session = m.get_session()
+def isInt(value): #Returns true if the given string can be converted to a valid integer
+    try:
+        int(value)
+        return True
+    except ValueError:
+        return False
 
-    t = getattr(m.Base.classes, table)
-
-    # Get geospatial columns
-    geo = m.GEOSPATIAL_COLUMNS
-    geospatial_columns = session.query(geo.column).filter(geo.dataset_uuid == table).all()
-    geo_column_objects = []
-    geo_column_names = []
-    # Create the geospatial object from the columns
-    for col in geospatial_columns:
-        geo_column_objects.append(geofunc.ST_AsGeoJSON(getattr(t, col[0])))
-        geo_column_names.append(col[0])
-
-    # build up geospatial select functions
-    # Note: we're just grabbing the first geospatial column right now. it is explicitly labeled 'geometry'
-    #       a picker for geo columns might be desirable someday
-    geojson = session.query(t, geo_column_objects[0].label('geometry')).filter(
-        getattr(t, columnName).ilike("%"+queryString+"%")
-        #getattr(t, columnName) == queryString
-    )
-    # Get a DataFrame with the results of the query
-    data = pd.read_sql(geojson.statement, geojson.session.bind)
-    geo_column_names.append('geometry')
-
-    # Build some properly formatted geojson to pass into leaflet
-    geojson = []
-    for i, r in data.iterrows():
-        # Geometry and properties are both required for a 'Feature' object.
-        geometry = r['geometry']
-        properties = r.drop(geo_column_names).to_dict()
-        geojson.append({
-            'type': 'Feature',
-            'properties': properties,
-            'geometry': json.loads(geometry),
-            'keys': sorted(properties.keys())
-        })
-    return JsonResponse(geojson, safe=False)
-    
+def isFloat(value): #Returns true if the given string can be converted to a valid float
+    try:
+        float(value)
+        return True
+    except ValueError:
+        return False
 
 def manage_dataset(request, table):
     """

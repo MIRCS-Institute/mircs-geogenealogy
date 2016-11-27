@@ -65,18 +65,6 @@ $( document ).ready(function() {
       });
     });
   }
-  //Get table data from the URL
-  function getTableFromURL() {
-    //Split URL on '/'
-    var parts = window.location.href.split('/');
-    for(var i=0; i<parts.length; i++) {
-      //Find view in url and return
-      if(parts[i] === 'view') {
-        return parts[i+1];
-      }
-    }
-    return false;
-  }
 
   //Build page picker for pagination.
   function buildPagePicker(parentElement, pageCount, selected)
@@ -204,3 +192,16 @@ $( document ).ready(function() {
     }
   }
 });
+
+ //Get table data from the URL
+function getTableFromURL() {
+    //Split URL on '/'
+	var parts = window.location.href.split('/');
+	for(var i=0; i<parts.length; i++) {
+		//Find view in url and return
+		if(parts[i] === 'view') {
+			return parts[i+1];
+		}
+	}
+	return false;
+}
