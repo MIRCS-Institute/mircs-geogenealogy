@@ -5,7 +5,7 @@ from django.conf import settings
 
 from sqlalchemy import create_engine, MetaData, Table, Column, Integer, \
                        String, Float, DateTime, ForeignKeyConstraint, ForeignKey,\
-                       Enum, UniqueConstraint, Boolean, func
+                       Enum, UniqueConstraint, Boolean, func, and_
 from geoalchemy2 import Geometry
 from types import StringType
 
@@ -327,67 +327,24 @@ def update_dataset(df, table, key):
 
     new_rows = df.copy()[df.index == -1]
     for index, row in df.iterrows():
-        query = 'SELECT * FROM mircs."%s" WHERE ' % table
+        ands = [] # List of AND statements
+
         for i in range(len(key)):
             col = key[i].replace(' ', '_')
-            query += '"%s"=\'%s\' ' % (col, getattr(row, col))
-            if i != len(key) - 1:
-                query += 'AND '
-            else:
-                query += ';'
-        df_sql = pd.read_sql(query, m.engine)
+            ands.append(getattr(orm, col) == getattr(row, col))
 
-        if df_sql.id.count() == 1:
+        session = m.get_session()
 
-            r_row = df_sql.iloc[0].to_dict()
-            for col in df.columns:
-                r_row[col] = row[col]
-            # It is possible that the geospatial columns were modified. The
-            # obj might need to be regenerated, we'll do that always to be safe.
-            session = m.get_session()
-            geo_col = m.GEOSPATIAL_COLUMNS.__table__
-            try:
-                col_defs = session.query(geo_col.c.column_definition).\
-                filter(geo_col.c.dataset_uuid == table).all()
-            except:
-                raise
-            finally:
-                session.close()
-
-            for col_def in col_defs:
-                col_def = col_def[0]
-                col_dict = {}
-                col_data = col_def.split('&')
-                for data in col_data:
-                    splt = data.split('=')
-                    col_dict[splt[0]] = splt[1]
-                r_row[col_dict['name']] = 'SRID=%s;POINT(%s %s)' % \
-                (col_dict['srid'], r_row[col_dict['lon_col']], r_row[col_dict['lat_col']])
-            session = m.get_session()
-            try:
-                query = 'UPDATE mircs."%s" SET ' % table
-                for k, v in row.to_dict().items():
-                    query += '"%s" = \'%s\', ' % (k, v)
-                query = query[:len(query) - 2]
-                query += ' WHERE id = %i;' % r_row['id']
-
-                session.execute(query)
-                session.commit()
-            except:
-                raise
-            finally:
-                session.close()
-        elif df_sql.id.count() == 0:
-            for col, v in row.iteritems():
-                c = row[col]
-                if type(c) == pd.tslib.Timestamp:
-                    unixtime = time.mktime(c.to_pydatetime().timetuple())
-                    # row[col] = int(unixtime)
+        try:
+            res = session.query(orm).filter(and_(*ands)).update(row.to_dict())
+        except:
+            raise
+        finally:
+            session.close()
+        if res == 0:
             list_dict = new_rows.T.to_dict().values()
             list_dict.append(row)
             new_rows = pd.DataFrame(list_dict)
-
-
     geospatial_columns = get_geospatial_columns(table)
     insert_df(new_rows, orm, geospatial_columns)
 
