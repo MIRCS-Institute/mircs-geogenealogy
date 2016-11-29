@@ -13,7 +13,7 @@ import math
 import numbers
 
 import website.models as m
-from .forms import Uploadfile, AddDatasetKey
+from .forms import Uploadfile, AddDatasetKey, SearchData
 
 import pandas as pd
 
@@ -605,7 +605,7 @@ def add_dataset_key(request, table):
         post_data = dict(request.POST)
 
         key_name = post_data['dataset_key_name'][0]
-        
+
         dataset_columns = post_data['dataset_columns']
 
         # Get the table
