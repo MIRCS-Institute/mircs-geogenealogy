@@ -14,6 +14,28 @@
     <div class="ui segment">
       <h1 class="ui header">{{ tablename }}</h1>
     </div>
+    {% if messages %}
+      {% for message in messages %}
+        {% if message.tags == 'success' %}
+          <div class="ui positive message">
+            <i class="close icon"></i>
+            <div class="header">
+              Success!
+            </div>
+            {{ message }}
+          </div>
+        {% endif %}
+        {% if message.tags == 'error' %}
+          <div class="ui negative message">
+            <i class="close icon"></i>
+            <div class="header">
+              Error!
+            </div>
+            {{ message }}
+          </div>
+        {% endif %}
+      {% endfor %}
+    {% endif %}
     <div class="ui segment grid">
         <div class="twelve wide column">
            <div class="ui medium header">pick action to perform</div>
