@@ -211,9 +211,15 @@ $( document ).ready(function() {
     }
   }
 });
+
 function show_modal(id){
-  myFunction(lefts[ids.indexOf(id.toString())],rights[ids.indexOf(id.toString())]);
+	createModal(lefts[ids.indexOf(id.toString())],rights[ids.indexOf(id.toString())]);
 }
+function showRowModal(left, right){
+	left += "<div><input class='ui button blue' type='button' value='view joined data entry' onClick= 'viewJoinedInfo(getTableFromURL())'></div>";
+	createModal(left, right);
+}
+
 //Get table data from the URL
 function getTableFromURL() {
   //Split URL on '/'
@@ -226,6 +232,7 @@ function getTableFromURL() {
   }
   return false;
 }
+
 //function for viewing data on joined entry
 function viewJoinedInfo(tabUrl){
   //example of getting data from datasets joined with this one

@@ -19,19 +19,3 @@ class AddDatasetKey(forms.Form):
         choices=[],
         widget=forms.SelectMultiple(attrs={'class': 'ui fluid dropdown', 'required': ''})
     )
-
-class SearchData(forms.Form):
-    def __init__(self, columnName, *args, **kwargs):
-        self.columnName = columnName
-        super(SearchData, self).__init__(*args, **kwargs)
-        self.fields['columnName'].choices = self.columnName
-
-    columnName = forms.ChoiceField(
-        label='Search this column:',
-        choices=[],
-        widget=forms.Select(attrs={'class': 'ui fluid search selection dropdown'})
-    )
-    queryString = forms.CharField(
-        label='For this value:',
-        widget=forms.TextInput(attrs={'class': 'ui input'})
-    )

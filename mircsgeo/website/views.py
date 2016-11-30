@@ -13,7 +13,7 @@ import math
 import numbers
 
 import website.models as m
-from .forms import Uploadfile, AddDatasetKey, SearchData
+from .forms import Uploadfile, AddDatasetKey
 
 import pandas as pd
 
@@ -271,16 +271,15 @@ def search_dataset(request, table):
             if col in post_data: #If that column name was returned in the post data, then there is an input for it
                 queries.append([col, post_data[col+'_query'][0].encode("ascii")]) #Add the pair
 
+        form = Uploadfile()
         #Call the page to view the results of the search and pass the queries
         return render(request, 'view_dataset_query.html', {
-            'queries': queries
+            'queries': queries,
+            'form': form
         })
     else:
-        # Get the columns in the table and add them to the dropdown in the form
-        columns = [str(x).split('.')[1] for x in getattr(m.Base.classes, table).__table__.columns]
-        form = SearchData(zip(columns, columns))
-        # Return the form
-        return render(request, 'search_dataset.html', {'form': form})
+        # Load the search page
+        return render(request, 'search_dataset.html', {})
 
 
 def get_dataset_query(request, table, queries):
@@ -304,7 +303,6 @@ def get_dataset_query(request, table, queries):
     while i < len(queries) and valid:
         if i != 0: #Add commas between filters
             search += ", "
-        logging.warning(str(getattr(table, queries[i]).type))
         if str(getattr(table, queries[i]).type) == 'INTEGER': #Query for integer columns
             if isInt(queries[i+1]): #If input string is a valid integer, add the filter
                 search += "getattr(table, queries["+str(i)+"]) == int(queries["+str(i+1)+"])"

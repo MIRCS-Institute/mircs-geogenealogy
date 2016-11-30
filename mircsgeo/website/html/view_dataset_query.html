@@ -7,7 +7,6 @@
 </script>
 <script src="{% static 'js/createTable.js' %}"></script>
 <script src="{% static 'js/view_dataset_query.js' %}"></script>
-<script src="{% static 'js/click_dot.js' %}"></script>
 
 {% endblock %}
 
@@ -15,20 +14,32 @@
 {% block title %}MIRCS Geo-Genealogy{% endblock %}
 {% block content %}
 <div class="ui long modal">
-  <i class="close icon"></i>
-  <div class="header">
-    Details
-  </div>
-  <div class="image content" id="m_content">
-  </div>
-  <div class="actions">
-    <div class="ui black deny button">
-      Close
-    </div>
-  </div>
+	<i class="close icon"></i>
+	<div class="header">
+		Details
+	</div>
+	<div class="image content" id="m_content"></div>
+	<div class="header">
+		Upload File
+	</div><br/>
+	<!-- Upload File Form -->
+	<form id='fileUploadForm' name = 'file' enctype='multipart/form-data' class="ui form">
+		{% csrf_token %}
+		<div class="ui input">
+			{{ form }}
+		</div>
+		<input class="ui button green" type="submit" value="Submit"/>
+	</form>
+	<!--/-->
+	<div class="actions">
+		<div class="ui black deny button">
+			Close
+		</div>
+	</div>
 </div>
 <div class="ui container">
   <a href="/" class="ui button">Home</a>
+  <a href="." class="ui button">New Search</a>
   <div class="ui segments">
     <div class="ui segment">
      <!-- <h1 class="ui header">{{ tablename }}</h1> -->

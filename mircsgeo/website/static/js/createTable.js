@@ -70,5 +70,5 @@ function viewRowModal(dataRow, columns)
         left += "<font color='purple'>" + columns[i] + "</font>"+ "<br/>";
         right += dataRow[i] +"<br/>";
 	}
-	myFunction(left, right);
+	showRowModal(left, right);
 }
