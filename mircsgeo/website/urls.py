@@ -15,7 +15,8 @@ urlpatterns = [
     url(r'^add_dataset_key/(?P<table>[^/]+)/$', views.add_dataset_key, name='add_dataset_key'),
     url(r'^get_dataset_keys/(?P<table>[^/]+)/$', views.get_dataset_keys, name='get_dataset_keys'),
     url(r'^manage/(?P<table>[^/]+)$', views.manage_dataset, name='manage_dataset'),
-    url(r'^manage/append/(?P<table>[^/]+)$', views.append_dataset, name='append_dataset'),
+    #updat dataset serves same function as append dataset
+    #url(r'^manage/append/(?P<table>[^/]+)$', views.append_dataset, name='append_dataset'),
     url(r'^manage/update/(?P<table>[^/]+)$', views.update_dataset, name='update_dataset'),
     url(r'^manage/append_column/(?P<table>[^/]+)$', views.append_column, name='append_column'),
     url(r'^get_dataset_page/(?P<table>[^/]+)/(?P<page_number>[0-9]+)/$', views.get_dataset_page, name='get_dataset_page'),

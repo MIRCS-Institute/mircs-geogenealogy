@@ -535,7 +535,8 @@ def append_column(request, table):
             'form': form,
             'table': table
         })
-
+#update dataset serve same function as append dataset
+'''
 def append_dataset(request, table):
     """
     Append dataset to existing table
@@ -591,7 +592,7 @@ def append_dataset(request, table):
             'form': form,
             'table': table
         })
-
+'''
 def update_dataset(request, table):
     """
     update  dataset to existing table
