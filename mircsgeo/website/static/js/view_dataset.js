@@ -212,6 +212,14 @@ $( document ).ready(function() {
   }
 });
 
+//Called from createTable, opens modal for clicking on a row
+function clickRow(dataRowString)
+{
+	var dataRow = dataRowString.split(",");
+	$.getJSON('/get_dataset_columns/' + getTableFromURL(), function(data) {
+		viewRowModal(dataRow, data['columns']);
+	});
+}
 function show_modal(id){
 	createModal(lefts[ids.indexOf(id.toString())],rights[ids.indexOf(id.toString())]);
 }

@@ -55,13 +55,6 @@ function createTableRow(dataRow) {
 }
 
 //When the user clicks on a row, bring up a modal with the information on it
-function clickRow(dataRowString)
-{
-	var dataRow = dataRowString.split(",");
-	$.getJSON('/get_dataset_columns/' + getTableFromURL(), function(data) {
-		viewRowModal(dataRow, data['columns']);
-	});
-}
 function viewRowModal(dataRow, columns)
 {
 	var left = "";

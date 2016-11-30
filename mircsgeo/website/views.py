@@ -64,6 +64,41 @@ def upload_file(request):
     # Render the upload file page
     return render(request, 'upload_file.html', {'form': form})
 
+def upload_image(request, table, row_id):
+    """
+    Gets image file uploaded from 'Add file to element' interfact and calls the 'add_resource' function
+    """
+    if request.method == 'POST':
+        form = Uploadfile(request.POST, request.FILES)
+        if form.is_valid():
+            # Store the name of the uploaded file in the session for this request
+            request.session['real_filename'] = request.FILES['file_upload'].name
+            # Generate a UUID to serve as the temporary filename, store it in the session
+            request.session['temp_filename'] = str(uuid.uuid4())
+            # Store the file extension in the session
+            request.session['filetype'] = os.path.splitext(request.session['real_filename'])[1]
+
+            # Figure out the path to the file location
+            absolute_path = os.path.join(
+                os.path.dirname(__file__),
+                settings.MEDIA_ROOT,
+                request.session['temp_filename']
+            )
+
+            if request.session['filetype'].lower() == '.png':
+                result = table_generator.add_resource(table, row_id, request.FILES['file_upload']) #Add resource
+            else:
+                # TODO: Add a proper error handler for invalid file uploads. Probably inform the user somehow
+                raise Exception("invalid file type uploaded: %s" % request.session['filetype'])
+
+            if result:
+                logging.warning("add_resource returned true")
+            else:
+                logging.warning("add_resource returned false")
+
+            return JsonResponse({
+                'result': result
+            })
 
 def store_file(request):
     """

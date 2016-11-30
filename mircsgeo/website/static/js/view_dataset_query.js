@@ -1,4 +1,32 @@
+var currentRow = -1; //Gets updated when a row is clicked on
 $( document ).ready(function() {
+	
+	$('#fileUploadForm #id_file_upload').change( function() {
+		$('.dimmer').dimmer('show', function(){
+		  //Get form data
+		  var formData = new FormData($('#fileUploadForm')[0]);
+		  console.log(formData);
+		  $.ajax({
+			url: '/upload_image/' + getTableFromURL() + '/' + currentRow + '/',
+			type: 'POST',
+			data: formData,
+			async: false,
+			cache: false,
+			contentType: false,
+			processData: false,
+			dataType: 'image/png',
+			success: function(data) {
+				if(data['result'] === true)
+					alert("File successfully added!");
+				else
+					alert("Upload failed...");
+			}
+		  });
+		  $('.dimmer').dimmer('hide');
+		});
+		return false;
+	});
+	
 	var group = null;
   
 	var req = getTableFromURL();
@@ -35,6 +63,7 @@ $( document ).ready(function() {
         div.innerHTML = "No results.";
 		document.getElementById("dataTable").appendChild(div);
 	}
+	
 
 });
 
@@ -49,6 +78,16 @@ function getTableFromURL() {
 		}
 	}
 	return false;
+}
+
+//Called from createTable, opens modal for clicking on a row
+function clickRow(dataRowString)
+{
+	var dataRow = dataRowString.split(",");
+	currentRow = dataRow[0];
+	$.getJSON('/get_dataset_columns/' + getTableFromURL(), function(data) {
+		viewRowModal(dataRow, data['columns']);
+	});
 }
 
 function showRowModal(left, right){

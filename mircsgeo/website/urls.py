@@ -27,4 +27,5 @@ urlpatterns = [
     url(r'^get_dataset_query/(?P<table>[^/]+)/(?P<queries>([^/]+\/)+)$', views.get_dataset_query, name='get_dataset_query'),
     url(r'^get_dataset_columns/(?P<table>[^/]+)/$', views.get_dataset_columns, name='get_dataset_columns'),
     url(r'^test_file/(?P<table>[^/]+)/(?P<row_id>[^/]+)/(?P<resource>[^/]+)/$', views.test_add_file, name="test_file"),
+    url(r'^upload_image/(?P<table>[^/]+)/(?P<row_id>[0-9]+)/$', views.upload_image, name='upload_image'),
 ]
