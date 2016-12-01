@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import datetime, time
 from django.conf import settings
+from django.core.files.uploadedfile import InMemoryUploadedFile
 
 from sqlalchemy import create_engine, MetaData, Table, Column, Integer, \
                        String, Float, DateTime, ForeignKeyConstraint, ForeignKey,\
@@ -368,17 +369,19 @@ def update_dataset(df, table, key):
                     row[col] = None
             res = session.query(orm).filter(and_(*ands)).update(row.to_dict())
         except:
-            return False
-        finally:
             session.close()
+            return False
+
 
         if res == 0:
             list_dict = new_rows.T.to_dict().values()
             list_dict.append(row)
             new_rows = pd.DataFrame(list_dict)
+    session.commit()
     session.close()
     geospatial_columns = get_geospatial_columns(table)
-    insert_df(new_rows, orm, geospatial_columns)
+    if len(new_rows):
+        insert_df(new_rows, orm, geospatial_columns)
     return True
 
 
@@ -440,7 +443,7 @@ def add_resource(table, row_id, resource, real_name=None):
         resource_orm.row_id = row_id
         if type(resource) is str:
             resource_orm.location = resource
-        elif type(resource) is file:
+        elif type(resource) is InMemoryUploadedFile:
             resource_name = os.path.basename(resource.name)
             resource_dir = os.path.join(
                 os.path.dirname(__file__),
@@ -488,6 +491,8 @@ def convert_nans(rows):
         for i, e in enumerate(row):
             try:
                 if pd.isnull(e):
+                    row[i] = 'null'
+                if str(e).lower() == 'NaN':
                     row[i] = 'null'
             except TypeError as err:
                 row[i] = str(e)

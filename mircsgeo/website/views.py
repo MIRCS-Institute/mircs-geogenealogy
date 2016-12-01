@@ -88,12 +88,7 @@ def upload_image(request, table, row_id):
             )
 
             if request.session['filetype'].lower() == '.png':
-                handler = open(absolute_path, 'wb+')
-                for chunk in request.FILES['file_upload'].chunks():
-                    handler.write(chunk)
-                handler.close()
-                handler = open(absolute_path, 'rb')
-                result = table_generator.add_resource(table, row_id, handler, request.session['real_filename']) #Add resource
+                result = table_generator.add_resource(table, row_id, request.FILES['file_upload'], request.session['real_filename']) #Add resource
             else:
                 # TODO: Add a proper error handler for invalid file uploads. Probably inform the user somehow
                 raise Exception("invalid file type uploaded: %s" % request.session['filetype'])
@@ -889,7 +884,7 @@ def get_joined_dataset(request,table,page_number):
         )
         d1_key_df = pd.read_sql(d1_key_query.statement, d1_key_query.session.bind)
         for row in d1_key_df.itertuples():
-            cols1= row[3]
+            cols1 = row[3]
         #query for the join key from the joined table
         d2_key_query = session.query(
             m.DATASET_KEYS
