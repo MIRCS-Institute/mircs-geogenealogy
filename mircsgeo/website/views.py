@@ -869,60 +869,65 @@ def get_joined_dataset(request,table,page_number):
     joined_results = []
     joined_database_ids = []
     #for every dataset joined to this one
-    for row in join_df.itertuples():
-        i1_name = row[columnList.index('index1_name')+1]
-        d2_id = row[columnList.index('dataset2_uuid')+1]
-        joined_database_ids.append(d2_id)
-        curr_db = d2_id
-        i2_name = row[columnList.index('index2_name')+1]
-        #query for the join key from the main table
-        d1_key_query = session.query(
-            m.DATASET_KEYS
-        ).filter(
-            m.DATASET_KEYS.dataset_uuid == table_id,
-            m.DATASET_KEYS.index_name == i1_name
-        )
-        d1_key_df = pd.read_sql(d1_key_query.statement, d1_key_query.session.bind)
-        for row in d1_key_df.itertuples():
-            cols1 = row[3]
-        #query for the join key from the joined table
-        d2_key_query = session.query(
-            m.DATASET_KEYS
-        ).filter(
-            m.DATASET_KEYS.dataset_uuid == d2_id,
-            m.DATASET_KEYS.index_name == i2_name
-        )
-        d2_key_df = pd.read_sql(d2_key_query.statement, d2_key_query.session.bind)
-        for row in d2_key_df.itertuples():
-            cols2 = row[3]
-        col_list = df.columns.tolist()
-        #for every entry on th dataset page
-        for row in df.itertuples():
-            matchString =""
-            #build matching parameter
-            for x in cols1:
-                sql="SELECT data_type FROM information_schema.columns WHERE table_name = '%s' AND column_name ='%s'" % (d2_id, x)
-                typeSql = m.engine.execute(sql)
-                for k in typeSql:
-                    dt = k[0]
-                if dt != 'character varying':
-                    matchString = "%s \"%s\"=%s AND" % (matchString,cols2[cols2.index(x)],row[col_list.index(x)+1])
-                else:
-                    matchString = "%s \"%s\"='%s' AND" % (matchString,cols2[cols2.index(x)],row[col_list.index(x)+1])
-            matchString = matchString[:len(matchString)-3]
-            #retrieve any entry from the joined dataset that corresponds to this entry
-            sql_stmt = "SELECT * FROM mircs.\"%s\" WHERE %s" %(d2_id,matchString)
-            result = m.engine.execute(sql_stmt)
-            #get result of sql query in the form of a dict and append to the final results
-            for j in result:
-                rowRes = dict(zip(j.keys(), j))
-                rowRes['dataset'] = curr_db
-                joined_results.append(rowRes)
-    return JsonResponse({
-        'joined_database_ids':json.dumps(joined_database_ids),
-        'main_dataset_key': cols1,
-        'joined_dataset_key':cols2,
-        'data':json.dumps(joined_results)})
+    if len(join_df):
+        for row in join_df.itertuples():
+            i1_name = row[columnList.index('index1_name')+1]
+            d2_id = row[columnList.index('dataset2_uuid')+1]
+            joined_database_ids.append(d2_id)
+            curr_db = d2_id
+            i2_name = row[columnList.index('index2_name')+1]
+            #query for the join key from the main table
+            d1_key_query = session.query(
+                m.DATASET_KEYS
+            ).filter(
+                m.DATASET_KEYS.dataset_uuid == table_id,
+                m.DATASET_KEYS.index_name == i1_name
+            )
+            d1_key_df = pd.read_sql(d1_key_query.statement, d1_key_query.session.bind)
+            print d1_key_df
+            for row in d1_key_df.itertuples():
+                cols1 = row[3]
+            #query for the join key from the joined table
+            d2_key_query = session.query(
+                m.DATASET_KEYS
+            ).filter(
+                m.DATASET_KEYS.dataset_uuid == d2_id,
+                m.DATASET_KEYS.index_name == i2_name
+            )
+            d2_key_df = pd.read_sql(d2_key_query.statement, d2_key_query.session.bind)
+            for row in d2_key_df.itertuples():
+                print row
+                cols2 = row[3]
+            col_list = df.columns.tolist()
+            #for every entry on th dataset page
+            for row in df.itertuples():
+                matchString =""
+                #build matching parameter
+                for x in cols1:
+                    sql="SELECT data_type FROM information_schema.columns WHERE table_name = '%s' AND column_name ='%s'" % (d2_id, x)
+                    typeSql = m.engine.execute(sql)
+                    for k in typeSql:
+                        dt = k[0]
+                    if dt != 'character varying':
+                        matchString = "%s \"%s\"=%s AND" % (matchString,cols2[cols2.index(x)],row[col_list.index(x)+1])
+                    else:
+                        matchString = "%s \"%s\"='%s' AND" % (matchString,cols2[cols2.index(x)],row[col_list.index(x)+1])
+                matchString = matchString[:len(matchString)-3]
+                #retrieve any entry from the joined dataset that corresponds to this entry
+                sql_stmt = "SELECT * FROM mircs.\"%s\" WHERE %s" %(d2_id,matchString)
+                result = m.engine.execute(sql_stmt)
+                #get result of sql query in the form of a dict and append to the final results
+                for j in result:
+                    rowRes = dict(zip(j.keys(), j))
+                    rowRes['dataset'] = curr_db
+                    joined_results.append(rowRes)
+        return JsonResponse({
+            'joined_database_ids':json.dumps(joined_database_ids),
+            'main_dataset_key': cols1,
+            'joined_dataset_key': cols2,
+            'data':json.dumps(joined_results)})
+    else:
+        return JsonResponse({})
 
 
 def join_datasets(request, table):
