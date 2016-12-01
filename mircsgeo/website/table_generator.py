@@ -414,7 +414,7 @@ def truncate_table(table):
     session.close()
 
 
-def add_resource(table, row_id, resource):
+def add_resource(table, row_id, resource, real_name=None):
     """
     Adds a resource to a row of a dataset so links and files can be linked to
     dataset rows. When dealing with a file, the file is saved in resources folder
@@ -424,6 +424,7 @@ def add_resource(table, row_id, resource):
     table (str) - the name of the table
     row_id (int) - the id of the row_id
     resource (mixed) - file to save or str
+    real_name (str) - real (original) name of the file
 
     Return:
     (bool) - True if resource was added
@@ -459,10 +460,11 @@ def add_resource(table, row_id, resource):
                 new_file.write(resource.read())
                 new_file.close()
                 resource_orm.location = full_path
-                resource_orm.file_name = resource_name
+                if real_name is not None:
+                    resource_orm.file_name = real_name
+                else:
+                    resource_orm.file_name = resource_name
             except:
-                print "Except!"
-                raise
                 session.close()
                 return False
 

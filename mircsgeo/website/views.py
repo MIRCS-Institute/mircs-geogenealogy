@@ -83,11 +83,17 @@ def upload_image(request, table, row_id):
             absolute_path = os.path.join(
                 os.path.dirname(__file__),
                 settings.MEDIA_ROOT,
-                request.session['temp_filename']
+                "resources",
+                "%s.%s" % (request.session['temp_filename'], request.session['filetype'])
             )
 
             if request.session['filetype'].lower() == '.png':
-                result = table_generator.add_resource(table, row_id, request.FILES['file_upload']) #Add resource
+                handler = open(absolute_path, 'wb+')
+                for chunk in request.FILES['file_upload'].chunks():
+                    handler.write(chunk)
+                handler.close()
+                handler = open(absolute_path, 'rb')
+                result = table_generator.add_resource(table, row_id, handler, request.session['real_filename']) #Add resource
             else:
                 # TODO: Add a proper error handler for invalid file uploads. Probably inform the user somehow
                 raise Exception("invalid file type uploaded: %s" % request.session['filetype'])
@@ -97,9 +103,7 @@ def upload_image(request, table, row_id):
             else:
                 logging.warning("add_resource returned false")
 
-            return JsonResponse({
-                'result': result
-            })
+            return redirect('/manage/' + table)
 
 def store_file(request):
     """
