@@ -118,6 +118,7 @@ def refresh():
     global Base
     global Session
     global engine
+    m = MetaData(schema=settings.DATABASES['default']['SCHEMA'])
     m.reflect(engine)
     Base = automap_base(metadata=m)
     Base.prepare(name_for_collection_relationship=name_for_collection_relationship)

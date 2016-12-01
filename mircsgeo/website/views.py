@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect
 from django.template import RequestContext
 from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 from django.conf import settings
+from django.contrib import messages
 from sqlalchemy.orm import sessionmaker, class_mapper
 from sqlalchemy.schema import Index
 from sqlalchemy import func, or_
@@ -491,6 +492,10 @@ def append_column(request, table):
         # Get the POST data
         post_data = dict(request.POST)
 
+        orm = getattr(m.Base.classes, table)
+        orm_col = orm.__table__.columns
+
+
         # Figure out the path to the file that was originally uploaded
         absolute_path = os.path.join(
             os.path.dirname(__file__),
@@ -504,15 +509,16 @@ def append_column(request, table):
         df = pd.read_csv(absolute_path)
         df = convert_time_columns(df)
 
-        # Replace spaces with underscores in the column names to be used in the db table
-        df.columns = [x.replace(" ", "_") for x in df.columns]
-        datatypes = table_generator.get_readable_types_from_dataframe(df)
+        df_col = [x.replace(' ', '_') for x in df.to_dict().keys()]
+        orm_col = [str(x).split('.')[1] for x in orm_col]
 
-        # Get a session
-        session = m.get_session()
+        new_cols = [x for x in df_col if x not in orm_col]
+        datatypes = table_generator.get_readable_types_from_dataframe(df, return_dict=True)
+        datatypes = {k: v for (k, v) in datatypes.iteritems() if k in new_cols}
 
-        # Append the column to the table
-        ids = table_generator.insert_column(df, datatypes, table)
+        ids = table_generator.insert_columns(datatypes, table)
+
+        table_generator.update_dataset(df, table)
 
         # Create entry in transaction table for appending column
         transaction = m.DATASET_TRANSACTIONS(
@@ -556,6 +562,7 @@ def append_dataset(request, table):
 
         # Get the table model
         table = getattr(m.Base.classes, table)
+
 
         # Get the current highest row id in the table
         query = session.query(func.max(table.id).label("last_id"))
@@ -604,11 +611,32 @@ def update_dataset(request, table):
     if request.method == 'POST':
         df = create_df_from_upload(request)
         key = request.POST.getlist('key')
-        table_generator.update_dataset(
+
+        orm = getattr(m.Base.classes, table)
+
+        orm_col = orm.__table__.columns
+        orm_col = [str(x).split('.')[1] for x in orm_col]
+        df_col = [x.replace(' ', '_') for x in df.to_dict().keys()]
+
+        new_cols = [x for x in df_col if x not in orm_col]
+
+        if len(new_cols):
+            datatypes = table_generator.get_readable_types_from_dataframe(df, return_dict=True)
+            datatypes = {k: v for (k, v) in datatypes.iteritems() if k in new_cols}
+            table_generator.insert_columns(datatypes, table)
+
+        orm = getattr(m.Base.classes, table)
+
+        successful = table_generator.update_dataset(
             df,
             table,
             key
         )
+
+        if successful:
+            messages.success(request, 'Dataset updated!')
+        else:
+            messages.error(request, 'Dataset failed to update!')
         return redirect('/manage/' + table)
     else:
         # Upload file form (Used for appending)

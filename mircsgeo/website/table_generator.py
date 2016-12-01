@@ -93,7 +93,28 @@ def create_table(df, datatypes, table_name, schema, geospatial_columns=None):
     m.m.create_all(m.engine)
     m.refresh()
     return table
-def insert_column(df,datatypes, table):
+
+def insert_columns(columns, table):
+    """
+    Adds columns to a dataset.
+
+    Arguments:
+    columns (dict) - all the columns to be added {name: type}
+    table (str) - the uuid of the dataset
+
+    Returns:
+    Nothing
+    """
+    columns = {k.replace('(','&#40'): v for (k, v) in columns.iteritems()}
+    columns = {k.replace(')','&#41'): v for (k, v) in columns.iteritems()}
+
+    for col, dtype in columns.iteritems():
+        add_column_to_table(table, col, dtype)
+        print col, dtype
+
+
+
+def insert_column(df, datatypes, table):
     """
     add a new column to the table
 
@@ -108,6 +129,7 @@ def insert_column(df,datatypes, table):
     #prepare variables
     df.columns = df.columns.str.replace('(','&#40')
     df.columns = df.columns.str.replace(')','&#41')
+    df.columns = df.columns.str.replace(' ', '_')
     columnList = df.columns.values.tolist()
     newCol = columnList[len(columnList)-1]
     columnList = columnList[:len(columnList)]
@@ -132,7 +154,7 @@ def insert_column(df,datatypes, table):
         #get the parameters to match on
         for col in columnList:
             dt = col_types[col]
-            if row[columnList.index(col)] == 'null':
+            if row[columnList.index(col)] == 'null' or row[columnList.index(col)] == 'NaT':
                 matchString = "%s \"%s\"=%s AND" % (matchString,col,row[columnList.index(col)])
             elif dt == 'character varying' or dt == 'timestamp without time zone':
                 matchString = "%s \"%s\"='%s' AND" % (matchString,col,row[columnList.index(col)])
@@ -151,7 +173,6 @@ def insert_column(df,datatypes, table):
     #get return value i.e. max id of rows affected (used fr transaction table entry)
     sql = "SELECT MAX(id) FROM mircs.\"%s\"" % (table.__name__,)
     res = m.engine.execute(sql)
-    m.refresh()
     for k in res:
         ret = k[0]
     return ret
@@ -202,6 +223,7 @@ def add_column_to_table(table, column_name, py_datatype):
     sql = "ALTER TABLE mircs.\"%s\" ADD COLUMN \"%s\" %s" % (table, column_name, psql_types[py_datatype])
     m.engine.execute(sql)
     m.refresh()
+    print getattr(m.Base.classes, table).__dict__
 
 def get_geospatial_columns(table_uuid):
     """
@@ -274,7 +296,7 @@ def get_alchemy_types(mapped_types):
     return rt
 
 
-def get_readable_types_from_dataframe(df):
+def get_readable_types_from_dataframe(df, return_dict=False):
     """
     Get human readable datatypes for the columns in a pandas.DataFrame. This is
     used to help the user verify that the system is auto-generating the correct
@@ -283,13 +305,19 @@ def get_readable_types_from_dataframe(df):
     Parameters:
     df (pandas.DataFrame) - The DataFrame the human readable datatype list will
                             be generated from.
+    return_dict (bool) - If a dict should be returned instead of a list
 
     Returns:
-    readable_types (list) - a list of human readable datatypes
+    readable_types (mixed) - a list or dict of human readable datatypes. Dict
+                             key is the column name
     """
-    readable_types = []
-    for d in df.dtypes:
-        readable_types.append(convert_type(d))
+
+    readable_types = {} if return_dict else []
+    for i, d in enumerate(df.dtypes):
+        if return_dict:
+            readable_types[df.columns[i]] = convert_type(d)
+        else:
+            readable_types.append(convert_type(d))
     return readable_types
 
 
@@ -320,11 +348,12 @@ def update_dataset(df, table, key):
     key (list) -   The names of the columns that make up the key
 
     Returns:
-    Nothing
+    bool - If the update was successful or not
     """
+    df = convert_nans(df)
     num_col = len(df.columns) # Gets the numbers of columns
     orm = getattr(m.Base.classes, table) # Gets the mapper for the table
-
+    session = m.get_session()
     new_rows = df.copy()[df.index == -1]
     for index, row in df.iterrows():
         ands = [] # List of AND statements
@@ -333,20 +362,24 @@ def update_dataset(df, table, key):
             col = key[i].replace(' ', '_')
             ands.append(getattr(orm, col) == getattr(row, col))
 
-        session = m.get_session()
-
         try:
+            for col in row.to_dict():
+                if str(row[col]).lower() == 'nat':
+                    row[col] = None
             res = session.query(orm).filter(and_(*ands)).update(row.to_dict())
         except:
-            raise
+            return False
         finally:
             session.close()
+
         if res == 0:
             list_dict = new_rows.T.to_dict().values()
             list_dict.append(row)
             new_rows = pd.DataFrame(list_dict)
+    session.close()
     geospatial_columns = get_geospatial_columns(table)
     insert_df(new_rows, orm, geospatial_columns)
+    return True
 
 
 def truncate_table(table):
