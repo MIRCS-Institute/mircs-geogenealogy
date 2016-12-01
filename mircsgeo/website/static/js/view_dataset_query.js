@@ -1,6 +1,6 @@
 var currentRow = -1; //Gets updated when a row is clicked on
 $( document ).ready(function() {
-	
+
 	$('#fileUploadForm #id_file_upload').change( function() {
 		$('.dimmer').dimmer('show', function(){
 		  //Get form data
@@ -14,21 +14,26 @@ $( document ).ready(function() {
 			cache: false,
 			contentType: false,
 			processData: false,
-			dataType: 'image/png',
+			//dataType: 'image/png',
 			success: function(data) {
-				if(data['result'] === true)
+				if(data['result'] == true)
 					alert("File successfully added!");
 				else
-					alert("Upload failed...");
+					alert("Upload failed.");
+				window.location.replace('/manage/'+getTableFromURL());
+			},
+			error: function(){
+				alert("Upload failed.");
+				window.location.replace('/manage/'+getTableFromURL());
 			}
 		  });
 		  $('.dimmer').dimmer('hide');
 		});
 		return false;
 	});
-	
+
 	var group = null;
-  
+
 	var req = getTableFromURL();
 	for(var i=0; i < queries.length; i++)
 	{
@@ -56,14 +61,14 @@ $( document ).ready(function() {
 		//Populate datatable with data from columns and rows
 		populateDataTable(dataTable, data['columns'], data['rows']);
 	}
-  
+
 	//If the query had no results
 	function noResults(){
 		var div = document.createElement("div");
         div.innerHTML = "No results.";
 		document.getElementById("dataTable").appendChild(div);
 	}
-	
+
 
 });
 
@@ -90,7 +95,7 @@ function clickRow(dataRowString)
 	});
 }
 
-function showRowModal(left, right){
+function showRowModal(left, right, id){
 	createModal(left, right);
 }
 

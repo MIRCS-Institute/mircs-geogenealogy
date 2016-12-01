@@ -221,11 +221,11 @@ function clickRow(dataRowString)
 	});
 }
 function show_modal(id){
-	createModal(lefts[ids.indexOf(id.toString())],rights[ids.indexOf(id.toString())]);
+	createModal(lefts[ids.indexOf(id.toString())],rights[ids.indexOf(id.toString())],id,getTableFromURL());
 }
-function showRowModal(left, right){
+function showRowModal(left, right, id){
 	left += "<div><input class='ui button blue' type='button' value='view joined data entry' onClick= 'viewJoinedInfo(getTableFromURL())'></div>";
-	createModal(left, right);
+	createModal(left, right , id, getTableFromURL());
 }
 
 //Get table data from the URL
@@ -245,6 +245,7 @@ function getTableFromURL() {
 function viewJoinedInfo(tabUrl){
   //example of getting data from datasets joined with this one
   $.getJSON('/get_joined_dataset/' + tabUrl + '/0/', function(data) {
+    console.log(JSON.stringify(data));
     left = "";
     right = "";
     m_cont ="<div class='ui very relaxed grid'>";

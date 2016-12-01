@@ -87,18 +87,46 @@ def upload_image(request, table, row_id):
                 "%s.%s" % (request.session['temp_filename'], request.session['filetype'])
             )
 
-            if request.session['filetype'].lower() == '.png':
-                result = table_generator.add_resource(table, row_id, request.FILES['file_upload'], request.session['real_filename']) #Add resource
-            else:
+            #if request.session['filetype'].lower() == '.png':
+            result = table_generator.add_resource(table, row_id, request.FILES['file_upload'], request.session['real_filename']) #Add resource
+            #else:
                 # TODO: Add a proper error handler for invalid file uploads. Probably inform the user somehow
-                raise Exception("invalid file type uploaded: %s" % request.session['filetype'])
+                #raise Exception("invalid file type uploaded: %s" % request.session['filetype'])
 
             if result:
                 logging.warning("add_resource returned true")
             else:
                 logging.warning("add_resource returned false")
 
-            return redirect('/manage/' + table)
+            return JsonResponse({
+                'result': result
+            })
+        else:
+            return JsonResponse({
+                'result': False
+            })
+
+def get_connected_resources(request,id,table):
+    """
+    view information about connected files
+    """
+    # Get a session
+    session = m.get_session()
+    resources = getattr(m.Base.classes, 'resources')
+    query = session.query(
+        resources
+    ).filter(
+        resources.dataset_uuid == table,
+        resources.row_id == id
+    )
+    df = pd.read_sql(query.statement, query.session.bind)
+    file_names=[]
+    columnList = df.columns.values.tolist()
+    for row in df.itertuples():
+        file_names.append(row[columnList.index('file_name')])
+    return JsonResponse({
+        'file_names': file_names
+    })
 
 def store_file(request):
     """
@@ -1081,6 +1109,12 @@ def download_dataset(request, table):
     #convert dataframe to csv
     df.to_csv(response, index=False)
 
+    return response
+
+def download_file(request,file_name):
+    f = open('website/media/resources/'+file_name,'rb')
+    response = HttpResponse(f.read(),content_type='image/*') # mimetype is replaced by content_type for django 1.7
+    response['Content-Disposition'] = 'attachment; filename=%s' % file_name
     return response
 
 def test_response(request):
